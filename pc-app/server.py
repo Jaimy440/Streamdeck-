@@ -12,12 +12,10 @@ import os
 import secrets
 import socket
 import sys
-import threading
 
 from aiohttp import WSMsgType, web
 
 import controls
-import voicefilter
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE, "config.json")
@@ -32,16 +30,6 @@ DEFAULT_CONFIG = {
         # Einstellungen > Tastenbelegung genauso eintragen!
         "mute_hotkey": "ctrl+shift+alt+m",
         "deafen_hotkey": "ctrl+shift+alt+d",
-    },
-    "voice_filter": {
-        "input_device": None,           # None = Windows-Standardmikrofon
-        "output_device": "CABLE Input",  # VB-Audio Virtual Cable
-        "threshold": 0.72,
-        "margin": 0.05,
-        "noise_gate_db": -45,
-        "lookahead_ms": 200,
-        "hold_ms": 400,
-        "autostart": False,
     },
     "buttons": [
         {"label": "Play / Pause", "icon": "⏯️", "action": "hotkey", "keys": "play/pause media"},
@@ -97,7 +85,6 @@ class App:
         self.clients: set[web.WebSocketResponse] = set()
         self.loop: asyncio.AbstractEventLoop | None = None
         self.discord = {"muted": False, "deafened": False}
-        self.filter = voicefilter.VoiceFilter(self.cfg["voice_filter"], BASE, self.notify_threadsafe)
         self._last_sys = None
 
     # ---------------------------------------------------------------- State
@@ -113,7 +100,6 @@ class App:
             "muted": muted,
             "mic_muted": mic,
             "discord": self.discord,
-            "filter": self.filter.state(),
             "buttons": [{"label": b.get("label", "?"), "icon": b.get("icon", "")} for b in self.cfg["buttons"]],
             "audio_available": self.audio.available,
         }
@@ -125,10 +111,6 @@ class App:
                 await ws.send_str(msg)
             except Exception:
                 self.clients.discard(ws)
-
-    def notify_threadsafe(self) -> None:
-        if self.loop and self.clients:
-            self.loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self.broadcast()))
 
     async def poll_system(self) -> None:
         """Erkennt Änderungen, die direkt am PC gemacht wurden (z.B. Lautstärketasten)."""
@@ -149,7 +131,6 @@ class App:
         cmd = msg.get("cmd")
         step = self.cfg.get("volume_step", 5)
         d = self.cfg["discord"]
-        vf = self.filter
         loop = asyncio.get_running_loop()
 
         if cmd == "volume_up":
@@ -183,34 +164,11 @@ class App:
             self.discord = {"muted": False, "deafened": False}
         elif cmd == "button":
             controls.run_action(self.cfg["buttons"][int(msg["index"])])
-        elif cmd == "filter_toggle":
-            await loop.run_in_executor(None, vf.stop if vf.running else vf.start)
-        elif cmd == "filter_enroll":
-            who = "other" if msg.get("who") == "other" else "me"
-            secs = float(msg.get("seconds", 20))
-            threading.Thread(target=self._enroll, args=(who, secs), daemon=True).start()
-        elif cmd == "filter_delete":
-            vf.delete_profile("other" if msg.get("who") == "other" else "me")
-        elif cmd == "filter_threshold":
-            self.cfg["voice_filter"]["threshold"] = round(float(msg["value"]), 2)
-            save_config(self.cfg)
         elif cmd == "ping":
             return
         else:
             raise ValueError(f"Unbekannter Befehl: {cmd}")
         await self.broadcast()
-
-    def _enroll(self, who: str, secs: float) -> None:
-        try:
-            self.filter.enroll(who, secs)
-            self._toast(f"Stimme {'deines Bruders' if who == 'other' else 'von dir'} gespeichert ✅")
-        except Exception as e:
-            self._toast(f"Einlernen fehlgeschlagen: {e}", error=True)
-
-    def _toast(self, text: str, error: bool = False) -> None:
-        if self.loop:
-            msg = {"type": "toast", "text": text, "error": error}
-            self.loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self.broadcast(msg)))
 
     # ---------------------------------------------------------------- HTTP
     async def ws_handler(self, request: web.Request) -> web.WebSocketResponse:
@@ -241,12 +199,6 @@ class App:
     async def on_startup(self, app: web.Application) -> None:
         self.loop = asyncio.get_running_loop()
         asyncio.ensure_future(self.poll_system())
-        if self.cfg["voice_filter"].get("autostart") and self.filter.profiles["me"] is not None:
-            try:
-                await self.loop.run_in_executor(None, self.filter.start)
-                print("[Filter] automatisch gestartet")
-            except Exception as e:
-                print(f"[Filter] Autostart fehlgeschlagen: {e}")
 
     def run(self) -> None:
         app = web.Application()

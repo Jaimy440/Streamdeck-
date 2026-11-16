@@ -50,34 +50,6 @@
     </div>
   </section>
 
-  <!-- Stimmfilter -->
-  <section class="card" id="filterCard">
-    <div class="row between">
-      <h2>🧠 Stimmfilter</h2>
-      <label class="switch"><input type="checkbox" id="filterSwitch"><span></span></label>
-    </div>
-    <p class="hint" id="filterHint">Lässt nur deine Stimme ins Mikro – dein Bruder wird rausgefiltert.</p>
-    <div id="filterLive">
-      <div class="meter-label"><span>Pegel</span><span id="lvlText">–</span></div>
-      <div class="meter"><div id="lvlBar"></div></div>
-      <div class="meter-label"><span>Ähnlichkeit zu dir</span><span id="simText">–</span></div>
-      <div class="meter"><div id="simBar"></div><div id="thrMark" class="mark"></div></div>
-      <div class="meter-label"><span>Ähnlichkeit Bruder</span><span id="simOText">–</span></div>
-      <div class="meter other"><div id="simOBar"></div></div>
-      <div id="gate" class="gate">Mikro ZU</div>
-    </div>
-    <div class="meter-label"><span>Empfindlichkeit (Schwelle)</span><span id="thrText">–</span></div>
-    <input id="thrSlider" type="range" min="0.50" max="0.95" step="0.01" value="0.72">
-    <div class="grid2">
-      <button class="key small" id="enrollMe">🙋 Meine Stimme einlernen<small id="meState"></small></button>
-      <button class="key small" id="enrollOther">👦 Bruder einlernen<small id="otherState">optional, viel genauer</small></button>
-    </div>
-    <div id="enrollBox" hidden>
-      <p id="enrollText"></p>
-      <div class="meter"><div id="enrollBar"></div></div>
-    </div>
-  </section>
-
   <!-- Eigene Buttons -->
   <section class="card">
     <h2>⚡ Aktionen</h2>

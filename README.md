@@ -5,7 +5,6 @@ Steuere deinen Windows-PC vom iPhone aus:
 - 🔊 **Lautstärke** lauter / leiser / Schieberegler / PC stumm
 - 💬 **Discord**: Mikro stumm, Taub (Deafen), **Full Mute** (Discord taub + Windows-Mikro aus)
 - 🎤 **Windows-Mikrofon** stumm schalten (wirkt auf alle Programme)
-- 🧠 **Stimmfilter**: Nur **deine** Stimme geht ins Mikro, dein Bruder wird rausgefiltert
 - ⚡ **Eigene Buttons**: Media-Tasten, Programme starten, Tastenkürzel, Webseiten … (frei in `config.json`)
 
 Die iPhone-App ist eine Web-App, die der PC ausliefert. Du legst sie über Safari auf den
@@ -15,8 +14,7 @@ Home-Bildschirm, dann startet sie wie eine normale App im Vollbild.
 ```
  iPhone (PC-Deck-App) ──WLAN / WebSocket──▶ PC (server.py)
                                              ├─ Windows-Lautstärke (pycaw)
-                                             ├─ Discord-Tastenkürzel (keyboard)
-                                             └─ Stimmfilter: Mikro ─▶ Filter ─▶ VB-Cable ─▶ Discord
+                                             └─ Discord-Tastenkürzel (keyboard)
 ```
 
 ---
@@ -63,62 +61,6 @@ Andere Kürzel kannst du in `pc-app/config.json` unter `"discord"` einstellen.
 
 ---
 
-## 4. Stimmfilter: Bruder rausfiltern 🧠
-
-### So funktioniert's
-
-Der Filter lernt deinen **Stimmabdruck**. Live prüft er alle 100 ms, ob gerade **du**
-sprichst. Nur dann wird dein Mikro an Discord durchgelassen. Spricht dein Bruder (oder
-ist es nur Hintergrundlärm), bleibt das Mikro zu. Weil das Mikro als virtuelles Gerät
-umgeleitet wird, funktioniert der Filter in **jedem** Programm (Discord, TeamSpeak, Spiele …).
-
-### Einrichtung
-
-1. Im Ordner `pc-app` doppelt auf **`install_filter.bat`** klicken
-   (lädt PyTorch, etwa 1 GB, dauert ein paar Minuten).
-2. **VB-Audio Virtual Cable** installieren (kostenlos): <https://vb-audio.com/Cable/>
-   → ZIP entpacken → `VBCABLE_Setup_x64.exe` **als Administrator** ausführen → PC neu starten.
-3. `start.bat` neu starten.
-4. In der App unter **Stimmfilter** auf **„🙋 Meine Stimme einlernen“** tippen und
-   20 Sekunden ganz normal sprechen (z. B. etwas vorlesen). Dein Bruder ist dabei leise.
-5. **Sehr empfohlen:** Auf **„👦 Bruder einlernen“** tippen. Jetzt spricht 20 Sekunden lang
-   nur dein Bruder. Danach vergleicht der Filter beide Stimmen und wird **viel genauer**.
-6. Schalter **Stimmfilter** einschalten.
-7. In **Discord** → Einstellungen → Sprache & Video → **Eingabegerät: `CABLE Output (VB-Audio Virtual Cable)`**.
-   In Discord außerdem **Rauschunterdrückung (Krisp) ausschalten** und
-   **„Eingabeempfindlichkeit automatisch bestimmen“** ausschalten bzw. ganz niedrig stellen.
-
-### Feineinstellung in der App
-
-- **Ähnlichkeit zu dir**: blauer Balken. Er sollte beim Sprechen **rechts** von der weißen Markierung (Schwelle) liegen.
-- **Ähnlichkeit Bruder**: gelber Balken.
-- **Empfindlichkeit (Schwelle)**:
-  - Du wirst abgeschnitten → Schwelle **runter** (z. B. 0.65)
-  - Dein Bruder kommt durch → Schwelle **hoch** (z. B. 0.80) oder Bruder einlernen
-
-Weitere Werte in `config.json` unter `"voice_filter"`:
-
-| Wert | Bedeutung |
-|------|-----------|
-| `input_device` | Dein echtes Mikro (Namensteil, z. B. `"Yeti"`). `null` = Windows-Standard |
-| `lookahead_ms` | Vorlauf, damit Wortanfänge nicht fehlen (mehr = sicherer, aber mehr Verzögerung) |
-| `hold_ms` | Wie lange das Mikro nach deiner Stimme offen bleibt (Sprechpausen) |
-| `noise_gate_db` | Alles leiser als das gilt als Stille |
-| `margin` | Wie deutlich du „mehr du“ als „Bruder“ sein musst |
-| `autostart` | `true` = Filter startet automatisch mit dem Programm |
-
-### Ehrliche Grenzen
-
-- Reden du und dein Bruder **gleichzeitig**, ist das Mikro offen (deine Stimme ist ja dabei)
-  und er ist leise im Hintergrund zu hören. Zwei gleichzeitige Stimmen in Echtzeit sauber
-  zu trennen schafft kein Heim-PC-Tool zuverlässig.
-- Es gibt etwa 0,2 s Verzögerung (der Vorlauf). In Discord merkt das praktisch niemand.
-- **Tipp dazu:** Ein **dynamisches Nieren-Mikro** (z. B. Shure SM58 oder Samson Q2U) oder ein
-  Headset-Mikro nah am Mund nimmt deinen Bruder schon von sich aus viel leiser auf.
-  Zusammen mit dem Filter ist das die beste Lösung.
-
----
-
 ## Eigene Buttons (`config.json`)
 
 ```json
@@ -141,8 +83,6 @@ Nach dem Ändern `start.bat` neu starten.
 |---------|--------|
 | iPhone verbindet nicht | Gleiches WLAN? Firewall-Abfrage zugelassen? Bei „Gast-WLAN“ geht es nicht. |
 | Discord reagiert nicht | Tastenkürzel in Discord eingetragen? Discord als Admin → PC-Deck auch als Admin starten. |
-| Filter: „Audiogerät 'CABLE Input' nicht gefunden“ | VB-Cable installieren und PC neu starten. |
-| Filter schneidet dich ab | Schwelle runter, eigene Stimme in ruhiger Umgebung neu einlernen. |
 | PC-IP hat sich geändert | Neuen QR-Code scannen und App neu zum Home-Bildschirm hinzufügen (oder im Router feste IP vergeben). |
 
 ## Dateien
@@ -150,10 +90,8 @@ Nach dem Ändern `start.bat` neu starten.
 ```
 pc-app/
   start.bat            Startet PC-Deck (installiert beim 1. Mal alles)
-  install_filter.bat   Installiert den Stimmfilter
   server.py            Server + Befehle
   controls.py          Lautstärke, Mikro, Tastenkürzel, Programme
-  voicefilter.py       Stimmerkennung & Mikrofon-Filter
   web/                 Die iPhone-App (HTML/CSS/JS)
   config.json          Deine Einstellungen (wird beim 1. Start erstellt)
 ```
