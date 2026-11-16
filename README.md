@@ -1,13 +1,14 @@
 # PC-Deck – dein iPhone als Streamdeck
 
-Steuere deinen Windows-PC vom iPhone aus. Schlichtes Design im Discord-Look, gemacht fürs **Querformat**
-(iPhone quer z. B. auf einem Ständer neben der Tastatur). Hochformat geht auch.
+Steuere deinen Windows-PC vom iPhone aus – im Look eines Hardware-Streamdecks: dunkle Tasten mit
+leuchtenden Farbakzenten, gemacht fürs **Querformat** (iPhone quer z. B. auf einem Ständer neben der Tastatur).
+Hochformat geht auch. Zwischen den Seiten wechselst du unten oder per Wischen; Playlists erscheinen als Tasten mit Cover.
 
 | Bereich | Was geht |
 |---------|----------|
-| **# steuerung** | Lautstärke (Regler, lauter/leiser, PC stumm) · Discord Mikro stumm / Taub / **Full Mute** · Windows-Mikro · eigene Aktions-Buttons |
-| **# spotify** | Deine Playlists & Lieblingssongs auswählen und abspielen · Play/Pause, Weiter, Zurück, Zufall, Wiederholen · Spotify-Lautstärke · Zeitleiste |
-| **# chrome** | Webseiten öffnen (immer als **neuer Tab** im offenen Chrome-Fenster) · Favoriten · laufendes **Video steuern**: Play/Pause, ±10 s, Zeitleiste, Lautstärke, Tempo, nächstes Video |
+| **Steuerung** | Lautstärke (Regler, lauter/leiser, PC stumm) · Discord Mikro stumm / Taub / **Full Mute** · Windows-Mikro · eigene Aktions-Buttons |
+| **Spotify** | Deine Playlists & Lieblingssongs auswählen und abspielen · Play/Pause, Weiter, Zurück, Zufall, Wiederholen · Spotify-Lautstärke · Zeitleiste |
+| **Chrome** | Webseiten öffnen (immer als **neuer Tab** im offenen Chrome-Fenster) · Favoriten · laufendes **Video steuern**: Play/Pause, ±10 s, Zeitleiste, Lautstärke, Tempo, nächstes Video |
 
 Die iPhone-App ist eine Web-App, die der PC ausliefert. Du legst sie über Safari auf den
 Home-Bildschirm, dann startet sie wie eine normale App im Vollbild.
@@ -82,7 +83,7 @@ Spotify erlaubt Fernsteuerung nur über eine eigene, kostenlose „Spotify-App�
    ```json
    "spotify": { "client_id": "hier-deine-client-id" }
    ```
-4. PC-Deck neu starten → in der App auf **# spotify** → **„Mit Spotify verbinden“**.
+4. PC-Deck neu starten → in der App auf die Seite **Spotify** → **„Mit Spotify verbinden“**.
    Am PC öffnet sich der Spotify-Login → **Zustimmen**. Fertig.
 
 Der Spotify-Login bleibt **dauerhaft gespeichert** (`spotify_token.json`) und wird automatisch erneuert.
@@ -101,7 +102,7 @@ Webseiten öffnen funktioniert auch ohne Erweiterung. Für die **Video-Steuerung
 1. In Chrome die Adresse `chrome://extensions` öffnen.
 2. Oben rechts **Entwicklermodus** einschalten.
 3. **„Entpackte Erweiterung laden“** → den Ordner **`chrome-extension`** aus diesem Repo auswählen.
-4. Fertig. In der App unter **# chrome** steht jetzt „Verbunden“.
+4. Fertig. In der App auf der Seite **Chrome** steht jetzt „Verbunden“.
 
 So funktioniert es:
 - **Webseite öffnen:** Ist Chrome offen, kommt ein **neuer Tab** ins zuletzt benutzte Fenster.

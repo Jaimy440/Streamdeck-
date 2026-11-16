@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PC-Deck">
-<meta name="theme-color" content="#1e1f22">
+<meta name="theme-color" content="#1c1c1e">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="style.css">
@@ -15,171 +15,52 @@
 </head>
 <body>
 
-<!-- Server-Leiste wie in Discord -->
-<nav class="rail">
-  <div class="rail-logo" aria-hidden="true">PD</div>
-  <div class="rail-sep"></div>
-  <button class="rail-btn" data-view="control" aria-label="Steuerung"><i data-icon="sliders"></i></button>
-  <button class="rail-btn" data-view="spotify" aria-label="Spotify"><i data-icon="music"></i></button>
-  <button class="rail-btn" data-view="chrome" aria-label="Chrome"><i data-icon="globe"></i></button>
-  <div class="rail-fill"></div>
-  <span class="rail-status off" id="railStatus" aria-label="Verbindung"></span>
-</nav>
+<header class="top">
+  <div class="brand">
+    <span class="brand-name">PC-Deck</span>
+    <span class="brand-page" id="pageName">Steuerung</span>
+  </div>
+  <div class="top-tools">
+    <input class="top-search" id="spSearch" type="search" placeholder="Playlist suchen" autocomplete="off" hidden>
+    <button class="tool" id="spReload" aria-label="Playlists neu laden" hidden><i data-icon="sync"></i></button>
+    <button class="tool" id="spLogout" aria-label="Spotify abmelden" hidden><i data-icon="logout"></i></button>
+    <button class="tool" id="discordReset" aria-label="Discord-Anzeige zurücksetzen"><i data-icon="sync"></i></button>
+    <span class="status off" id="status"><span class="dot"></span><span id="statusText">Getrennt</span></span>
+  </div>
+</header>
 
-<main class="main">
-  <header class="topbar">
-    <span class="hash">#</span>
-    <h1 id="viewTitle">steuerung</h1>
-    <span class="topbar-sub" id="viewSub"></span>
-    <span class="conn off" id="conn"><span class="dot"></span><span id="connText">Getrennt</span></span>
-  </header>
-
-  <!-- ================= Steuerung ================= -->
-  <section class="view" id="view-control">
-    <div class="cols">
-      <div class="card">
-        <div class="card-head">
-          <h2>Lautstärke</h2>
-          <span class="value" id="volText">--%</span>
-        </div>
-        <input class="range" id="volSlider" type="range" min="0" max="100" value="50">
-        <div class="tiles t3">
-          <button class="tile" data-cmd="volume_down"><i data-icon="minus"></i><span>Leiser</span></button>
-          <button class="tile" id="btnMute" data-cmd="toggle_mute"><i data-icon="volumex"></i><span>PC stumm</span></button>
-          <button class="tile" data-cmd="volume_up"><i data-icon="plus"></i><span>Lauter</span></button>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-head">
-          <h2>Discord</h2>
-          <button class="link" id="discordReset"><i data-icon="sync"></i>Sync</button>
-        </div>
-        <div class="tiles t2">
-          <button class="tile" id="btnDMute" data-cmd="discord_mute"><i data-icon="micoff"></i><span>Mikro stumm</span></button>
-          <button class="tile" id="btnDeaf" data-cmd="discord_deafen"><i data-icon="headphones"></i><span>Taub</span></button>
-          <button class="tile" id="btnWinMic" data-cmd="mic_mute"><i data-icon="mic"></i><span>Windows-Mikro</span></button>
-          <button class="tile danger" id="btnFull" data-cmd="full_mute"><i data-icon="ban"></i><span>Full Mute</span></button>
-        </div>
-      </div>
-
-      <div class="card wide">
-        <div class="card-head"><h2>Aktionen</h2></div>
-        <div class="tiles deck" id="deck"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= Spotify ================= -->
-  <section class="view" id="view-spotify" hidden>
-    <div class="card" id="spSetup" hidden>
-      <div class="card-head"><h2>Spotify einrichten</h2></div>
-      <ol class="steps">
-        <li>Öffne am PC <b>developer.spotify.com/dashboard</b> → <b>Create app</b></li>
-        <li>Bei <b>Redirect URI</b> eintragen: <code id="spRedirect"></code></li>
-        <li>Bei „APIs used“ <b>Web API</b> anhaken → Speichern</li>
-        <li>Die <b>Client ID</b> in <code>config.json</code> bei <code>"spotify"</code> eintragen und PC-Deck neu starten</li>
-      </ol>
-    </div>
-    <div class="card center" id="spLogin" hidden>
-      <i data-icon="music" class="big-icon spotify"></i>
-      <p>Verbinde dein Spotify-Konto. Das musst du nur <b>einmal</b> machen,<br>der Login bleibt danach gespeichert.</p>
-      <button class="btn spotify" id="spLoginBtn">Mit Spotify verbinden</button>
-      <p class="muted small">Der Login öffnet sich im Browser auf deinem PC.</p>
-    </div>
-
-    <div class="cols" id="spMain" hidden>
-      <div class="card">
-        <div class="now">
-          <div class="cover" id="spCover"><i data-icon="music"></i></div>
-          <div class="now-text">
-            <div class="now-title" id="spTitle">Nichts läuft</div>
-            <div class="now-sub" id="spArtist">Wähle eine Playlist</div>
-            <div class="now-dev" id="spDevice"></div>
-          </div>
-        </div>
-        <input class="range thin" id="spProgress" type="range" min="0" max="1000" value="0">
-        <div class="times"><span id="spPos">0:00</span><span id="spDur">0:00</span></div>
-        <div class="transport">
-          <button class="icon-btn" id="spShuffle" aria-label="Zufall"><i data-icon="shuffle"></i></button>
-          <button class="icon-btn" data-sp="previous" aria-label="Zurück"><i data-icon="prev"></i></button>
-          <button class="play-btn" id="spPlay" aria-label="Play/Pause"><i data-icon="play"></i></button>
-          <button class="icon-btn" data-sp="next" aria-label="Weiter"><i data-icon="next"></i></button>
-          <button class="icon-btn" id="spRepeat" aria-label="Wiederholen"><i data-icon="repeat"></i></button>
-        </div>
-        <div class="vol-row" id="spVolRow">
-          <i data-icon="volume"></i>
-          <input class="range thin" id="spVol" type="range" min="0" max="100" value="50">
-        </div>
-        <p class="muted small" id="spFree" hidden>Spotify Free: Playlists öffnen sich in der Spotify-App, Play/Weiter laufen über die Medientasten.</p>
-      </div>
-
-      <div class="card list-card">
-        <div class="card-head">
-          <h2>Playlists</h2>
-          <span>
-            <button class="link" id="spReload"><i data-icon="sync"></i></button>
-            <button class="link" id="spLogout">Abmelden</button>
-          </span>
-        </div>
-        <input class="search" id="spSearch" type="search" placeholder="Playlist suchen" autocomplete="off">
-        <div class="list" id="spList"><p class="muted small">Lade Playlists …</p></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= Chrome ================= -->
-  <section class="view" id="view-chrome" hidden>
-    <div class="cols">
-      <div class="card">
-        <div class="card-head"><h2>Webseite öffnen</h2><span class="badge" id="extBadge">Erweiterung fehlt</span></div>
-        <form class="msgbox" id="urlForm">
-          <input id="urlInput" type="text" inputmode="url" enterkeyhint="go" autocomplete="off"
-                 autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Adresse oder Suche …">
-          <button type="submit" aria-label="Öffnen"><i data-icon="send"></i></button>
-        </form>
-        <p class="muted small">Öffnet sich als neuer Tab im offenen Chrome-Fenster.</p>
-        <div class="favs" id="favs"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-head"><h2>Video</h2><span class="muted small" id="vHost"></span></div>
-        <div id="vNone" class="empty">
-          <i data-icon="play"></i>
-          <p id="vNoneText">Kein Video in Chrome gefunden.</p>
-        </div>
-        <div id="vBox" hidden>
-          <div class="now-title clamp2" id="vTitle"></div>
-          <input class="range thin" id="vProgress" type="range" min="0" max="1000" value="0">
-          <div class="times"><span id="vPos">0:00</span><span id="vDur">0:00</span></div>
-          <div class="transport">
-            <button class="icon-btn labeled" data-v="seek_rel" data-val="-10" aria-label="10 s zurück"><i data-icon="back10"></i><small>10</small></button>
-            <button class="play-btn" id="vPlay" data-v="toggle" aria-label="Play/Pause"><i data-icon="play"></i></button>
-            <button class="icon-btn labeled" data-v="seek_rel" data-val="10" aria-label="10 s vor"><i data-icon="fwd10"></i><small>10</small></button>
-            <button class="icon-btn" data-v="next" aria-label="Nächstes Video"><i data-icon="next"></i></button>
-          </div>
-          <div class="vol-row">
-            <button class="icon-btn sm" id="vMute" data-v="mute" aria-label="Stumm"><i data-icon="volume"></i></button>
-            <input class="range thin" id="vVol" type="range" min="0" max="100" value="100">
-          </div>
-          <div class="chips" id="vSpeed">
-            <button data-speed="0.75">0.75×</button><button data-speed="1">1×</button>
-            <button data-speed="1.25">1.25×</button><button data-speed="1.5">1.5×</button><button data-speed="2">2×</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="view" id="view-setup" hidden>
-    <div class="card center">
-      <i data-icon="link" class="big-icon"></i>
-      <h2 class="plain">Mit deinem PC verbinden</h2>
+<main class="stage" id="stage">
+  <section class="page" id="page-control"><div class="deck" id="deckControl"></div></section>
+  <section class="page" id="page-spotify" hidden><div class="deck" id="deckSpotify"></div></section>
+  <section class="page" id="page-chrome" hidden><div class="deck" id="deckChrome"></div></section>
+  <section class="page" id="page-setup" hidden>
+    <div class="panel">
+      <i data-icon="link" class="panel-icon"></i>
+      <h2>Mit deinem PC verbinden</h2>
       <p>Starte <b>PC-Deck</b> am PC und scanne den QR-Code mit der iPhone-Kamera.<br>
       Danach in Safari: <b>Teilen → Zum Home-Bildschirm</b>.</p>
     </div>
   </section>
 </main>
+
+<nav class="pager" id="pager">
+  <button data-page="control"><i data-icon="sliders"></i><span>Steuerung</span></button>
+  <button data-page="spotify"><i data-icon="music"></i><span>Spotify</span></button>
+  <button data-page="chrome"><i data-icon="globe"></i><span>Chrome</span></button>
+</nav>
+
+<!-- Eingabe für Webseiten -->
+<div class="sheet-bg" id="sheet" hidden>
+  <form class="sheet" id="urlForm">
+    <div class="sheet-title">Webseite in neuem Tab öffnen</div>
+    <div class="sheet-row">
+      <input id="urlInput" type="text" inputmode="url" enterkeyhint="go" autocomplete="off"
+             autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="youtube.com oder Suchbegriff">
+      <button type="submit" class="sheet-go">Öffnen</button>
+    </div>
+    <button type="button" class="sheet-cancel" id="urlCancel">Abbrechen</button>
+  </form>
+</div>
 
 <div id="toast" role="status"></div>
 <script src="app.js"></script>

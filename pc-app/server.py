@@ -56,12 +56,12 @@ DEFAULT_CONFIG = {
         ],
     },
     "buttons": [
-        {"label": "Play / Pause", "icon": "⏯️", "action": "hotkey", "keys": "play/pause media"},
+        {"label": "Play/Pause", "icon": "⏯️", "action": "hotkey", "keys": "play/pause media"},
         {"label": "Weiter", "icon": "⏭️", "action": "hotkey", "keys": "next track"},
         {"label": "Zurück", "icon": "⏮️", "action": "hotkey", "keys": "previous track"},
         {"label": "Discord", "icon": "💬", "action": "url", "target": "discord://"},
         {"label": "Screenshot", "icon": "📸", "action": "hotkey", "keys": "windows+shift+s"},
-        {"label": "Task-Manager", "icon": "📊", "action": "hotkey", "keys": "ctrl+shift+esc"},
+        {"label": "Tasks", "icon": "📊", "action": "hotkey", "keys": "ctrl+shift+esc"},
         {"label": "Sperren", "icon": "🔒", "action": "command", "target": "rundll32.exe user32.dll,LockWorkStation"},
     ],
 }
