@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PC-Deck">
+<meta name="theme-color" content="#0e0f13">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+<title>PC-Deck</title>
+</head>
+<body>
+<header>
+  <h1>PC-Deck</h1>
+  <span id="conn" class="conn off">getrennt</span>
+</header>
+
+<main id="app" hidden>
+  <!-- Lautstärke -->
+  <section class="card">
+    <div class="row between">
+      <h2>🔊 Lautstärke</h2>
+      <span id="volText" class="big">--%</span>
+    </div>
+    <input id="volSlider" type="range" min="0" max="100" value="50">
+    <div class="grid3">
+      <button class="key" data-cmd="volume_down">➖<small>Leiser</small></button>
+      <button class="key" id="btnMute" data-cmd="toggle_mute">🔇<small>PC stumm</small></button>
+      <button class="key" data-cmd="volume_up">➕<small>Lauter</small></button>
+    </div>
+  </section>
+
+  <!-- Discord -->
+  <section class="card">
+    <div class="row between">
+      <h2>💬 Discord</h2>
+      <button class="link" id="discordReset" title="Anzeige zurücksetzen">↺ Sync</button>
+    </div>
+    <div class="grid3">
+      <button class="key" id="btnDMute" data-cmd="discord_mute">🎙️<small>Mikro stumm</small></button>
+      <button class="key" id="btnDeaf" data-cmd="discord_deafen">🎧<small>Taub</small></button>
+      <button class="key danger" id="btnFull" data-cmd="full_mute">⛔<small>Full Mute</small></button>
+    </div>
+    <div class="grid3">
+      <button class="key" id="btnWinMic" data-cmd="mic_mute">🎤<small>Windows-Mikro</small></button>
+    </div>
+  </section>
+
+  <!-- Stimmfilter -->
+  <section class="card" id="filterCard">
+    <div class="row between">
+      <h2>🧠 Stimmfilter</h2>
+      <label class="switch"><input type="checkbox" id="filterSwitch"><span></span></label>
+    </div>
+    <p class="hint" id="filterHint">Lässt nur deine Stimme ins Mikro – dein Bruder wird rausgefiltert.</p>
+    <div id="filterLive">
+      <div class="meter-label"><span>Pegel</span><span id="lvlText">–</span></div>
+      <div class="meter"><div id="lvlBar"></div></div>
+      <div class="meter-label"><span>Ähnlichkeit zu dir</span><span id="simText">–</span></div>
+      <div class="meter"><div id="simBar"></div><div id="thrMark" class="mark"></div></div>
+      <div class="meter-label"><span>Ähnlichkeit Bruder</span><span id="simOText">–</span></div>
+      <div class="meter other"><div id="simOBar"></div></div>
+      <div id="gate" class="gate">Mikro ZU</div>
+    </div>
+    <div class="meter-label"><span>Empfindlichkeit (Schwelle)</span><span id="thrText">–</span></div>
+    <input id="thrSlider" type="range" min="0.50" max="0.95" step="0.01" value="0.72">
+    <div class="grid2">
+      <button class="key small" id="enrollMe">🙋 Meine Stimme einlernen<small id="meState"></small></button>
+      <button class="key small" id="enrollOther">👦 Bruder einlernen<small id="otherState">optional, viel genauer</small></button>
+    </div>
+    <div id="enrollBox" hidden>
+      <p id="enrollText"></p>
+      <div class="meter"><div id="enrollBar"></div></div>
+    </div>
+  </section>
+
+  <!-- Eigene Buttons -->
+  <section class="card">
+    <h2>⚡ Aktionen</h2>
+    <div class="grid4" id="deck"></div>
+  </section>
+</main>
+
+<section id="setup" class="card" hidden>
+  <h2>Verbinden</h2>
+  <p>Starte <b>PC-Deck</b> auf deinem PC und scanne den QR-Code im Fenster mit der iPhone-Kamera.</p>
+  <p class="hint">Danach in Safari: Teilen → „Zum Home-Bildschirm“, dann hast du eine App.</p>
+</section>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.venv/
+pc-app/config.json
+pc-app/voice_*.npy
