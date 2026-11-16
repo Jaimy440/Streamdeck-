@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .venv/
 pc-app/config.json
+pc-app/spotify_token.json

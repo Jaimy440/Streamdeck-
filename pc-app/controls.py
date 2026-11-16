@@ -127,17 +127,21 @@ def send_hotkey(combo: str, hold: float = 0.06) -> None:
     keyboard.release(combo)
 
 
+def open_target(target: str) -> None:
+    """Öffnet ein Programm, eine Datei oder einen App-Link (z.B. spotify:)."""
+    if IS_WIN:
+        os.startfile(target)  # type: ignore[attr-defined]
+    else:
+        subprocess.Popen(["xdg-open", target])
+
+
 def run_action(btn: dict) -> None:
     """Führt eine frei konfigurierbare Button-Aktion aus config.json aus."""
     action = btn.get("action")
     if action == "hotkey":
         threading.Thread(target=send_hotkey, args=(btn.get("keys", ""),), daemon=True).start()
     elif action == "launch":
-        target = btn.get("target", "")
-        if IS_WIN:
-            os.startfile(target)  # type: ignore[attr-defined]  # Programme, Dateien, spotify: usw.
-        else:
-            subprocess.Popen(["xdg-open", target])
+        open_target(btn.get("target", ""))
     elif action == "url":
         webbrowser.open(btn.get("target", ""))
     elif action == "command":
