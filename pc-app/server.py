@@ -17,8 +17,10 @@ import webbrowser
 
 from aiohttp import WSMsgType, web
 
+import apps
 import chrome
 import controls
+import layout
 import spotify
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -46,25 +48,13 @@ DEFAULT_CONFIG = {
     },
     "chrome": {
         "path": "",   # leer = automatisch suchen
-        "favorites": [
-            {"label": "YouTube", "url": "https://www.youtube.com", "color": "#ff0033"},
-            {"label": "Twitch", "url": "https://www.twitch.tv", "color": "#9146ff"},
-            {"label": "Netflix", "url": "https://www.netflix.com", "color": "#e50914"},
-            {"label": "Google", "url": "https://www.google.com", "color": "#4285f4"},
-            {"label": "Gmail", "url": "https://mail.google.com", "color": "#ea4335"},
-            {"label": "ChatGPT", "url": "https://chatgpt.com", "color": "#10a37f"},
-        ],
     },
-    "buttons": [
-        {"label": "Play/Pause", "icon": "⏯️", "action": "hotkey", "keys": "play/pause media"},
-        {"label": "Weiter", "icon": "⏭️", "action": "hotkey", "keys": "next track"},
-        {"label": "Zurück", "icon": "⏮️", "action": "hotkey", "keys": "previous track"},
-        {"label": "Discord", "icon": "💬", "action": "url", "target": "discord://"},
-        {"label": "Screenshot", "icon": "📸", "action": "hotkey", "keys": "windows+shift+s"},
-        {"label": "Tasks", "icon": "📊", "action": "hotkey", "keys": "ctrl+shift+esc"},
-        {"label": "Sperren", "icon": "🔒", "action": "command", "target": "rundll32.exe user32.dll,LockWorkStation"},
-    ],
+    # "pages": Tasten-Layout – wird in der App im Bearbeiten-Modus eingestellt
 }
+
+# Beschriftungen der alten Standard-Buttons (unverändert -> neues Standard-Layout nehmen)
+OLD_DEFAULT_LABELS = {"Play / Pause", "Play/Pause", "Weiter", "Zurück", "Discord", "Spotify",
+                      "Screenshot", "Task-Manager", "Tasks", "Sperren"}
 
 
 def _merge(default: dict, user: dict) -> dict:
@@ -76,10 +66,19 @@ def _merge(default: dict, user: dict) -> dict:
 
 def load_config() -> dict:
     cfg = copy.deepcopy(DEFAULT_CONFIG)
+    user: dict = {}
     if os.path.exists(CONFIG_PATH):
         with open(CONFIG_PATH, encoding="utf-8") as f:
-            cfg = _merge(DEFAULT_CONFIG, json.load(f))
+            user = json.load(f)
+        cfg = _merge(DEFAULT_CONFIG, user)
     cfg.pop("voice_filter", None)   # Altlast aus früherer Version
+    # Altes Format (buttons + favorites) einmalig in Seiten/Tasten umwandeln
+    old_buttons = cfg.pop("buttons", None)
+    old_favs = cfg.get("chrome", {}).pop("favorites", None)
+    if not cfg.get("pages"):
+        if old_buttons and all(b.get("label") in OLD_DEFAULT_LABELS for b in old_buttons):
+            old_buttons = None
+        cfg["pages"] = layout.default_pages(old_buttons, old_favs)
     if not cfg.get("token"):
         cfg["token"] = secrets.token_urlsafe(16)
     save_config(cfg)
@@ -147,8 +146,7 @@ class App:
             "muted": muted,
             "mic_muted": mic,
             "discord": self.discord,
-            "buttons": [{"label": b.get("label", "?"), "icon": b.get("icon", "")} for b in self.cfg["buttons"]],
-            "favorites": self.cfg["chrome"]["favorites"],
+            "pages": self.cfg["pages"],
             "chrome_ext": self.ext is not None,
             "spotify": self.spotify.status(),
             "audio_available": self.audio.available,
@@ -239,13 +237,72 @@ class App:
                 self.audio.toggle_mic_mute()
         elif cmd == "discord_reset":
             self.discord = {"muted": False, "deafened": False}
-        elif cmd == "button":
-            controls.run_action(self.cfg["buttons"][int(msg["index"])])
+        elif cmd == "run":
+            key = layout.find_key(self.cfg["pages"], str(msg.get("key", "")))
+            if not key or "action" not in key:
+                raise ValueError("Taste nicht gefunden")
+            return await self.run_action(key["action"], ws)
+        elif cmd == "layout_save":
+            self.cfg["pages"] = layout.clean_pages(msg.get("pages"), self.cfg["pages"])
+            save_config(self.cfg)
+        elif cmd == "layout_reset":
+            self.cfg["pages"] = layout.default_pages()
+            save_config(self.cfg)
+            await self.send(ws, toast("Standard-Layout wiederhergestellt"))
+        elif cmd == "apps_list":
+            loop = asyncio.get_running_loop()
+            await self.send(ws, {"type": "apps", "data": await loop.run_in_executor(None, apps.list_apps)})
+            return
         elif cmd == "ping":
             return
         else:
             raise ValueError(f"Unbekannter Befehl: {cmd}")
         await self.broadcast()
+
+    async def run_action(self, a: dict, ws) -> None:
+        """Führt die Aktion einer frei belegten Taste aus."""
+        t = a.get("type")
+        loop = asyncio.get_running_loop()
+        if t in ("volume_up", "volume_down", "toggle_mute", "mic_mute", "discord_mute", "discord_deafen", "full_mute"):
+            return await self.handle({"cmd": t}, ws)
+        if t == "media":
+            await loop.run_in_executor(None, controls.send_hotkey, a.get("key", "play/pause media"))
+        elif t == "hotkey":
+            await loop.run_in_executor(None, controls.send_hotkey, a.get("keys", ""))
+        elif t == "launch":
+            await loop.run_in_executor(None, controls.open_target, a.get("target", ""))
+        elif t == "command":
+            controls.run_action({"action": "command", "target": a.get("target", "")})
+        elif t == "spotify_playlist":
+            await self.handle_spotify("spotify_play", {"uri": a.get("uri", "")}, ws)
+        elif t == "spotify":
+            p = self._last_player or {}
+            op = a.get("op")
+            vol = p.get("volume") if p.get("volume") is not None else 50
+            action, value = {
+                "play_pause": ("pause" if p.get("playing") else "play", None),
+                "next": ("next", None), "previous": ("previous", None),
+                "shuffle": ("shuffle", not p.get("shuffle")),
+                "repeat": ("repeat", {"off": "context", "context": "track"}.get(p.get("repeat", "off"), "off")),
+                "vol_up": ("volume", min(100, vol + 10)), "vol_down": ("volume", max(0, vol - 10)),
+            }[op]
+            await self.handle_spotify("spotify_control", {"action": action, "value": value}, ws)
+        elif t == "chrome_url":
+            await self.handle_chrome("chrome_open", {"url": a.get("url", "")}, ws)
+        elif t == "chrome_video":
+            m = self.chrome_media or {}
+            speeds = [1, 1.25, 1.5, 2, 0.75]
+            rate = m.get("rate", 1)
+            action, value = {
+                "toggle": ("toggle", None), "back": ("seek_rel", -10), "fwd": ("seek_rel", 10),
+                "next": ("next", None), "mute": ("mute", None),
+                "speed": ("speed", speeds[(speeds.index(rate) + 1) % len(speeds)] if rate in speeds else 1),
+                "vol_up": ("volume", min(1, m.get("volume", 1) + 0.1)),
+                "vol_down": ("volume", max(0, m.get("volume", 1) - 0.1)),
+            }[a.get("op")]
+            await self.handle_chrome("chrome_media", {"action": action, "value": value}, ws)
+        elif t == "none":
+            await self.send(ws, toast("Diese Taste ist noch nicht belegt – tippe auf ✎ Bearbeiten"))
 
     async def handle_spotify(self, cmd: str, msg: dict, ws) -> None:
         sp = self.spotify

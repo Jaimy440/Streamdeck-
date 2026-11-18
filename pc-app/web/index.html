@@ -18,22 +18,24 @@
 <header class="top">
   <div class="brand">
     <span class="brand-name">PC-Deck</span>
-    <span class="brand-page" id="pageName">Steuerung</span>
+    <span class="brand-page" id="pageName"></span>
+    <span class="edit-chip" id="editChip" hidden>Bearbeiten</span>
   </div>
   <div class="top-tools">
     <input class="top-search" id="spSearch" type="search" placeholder="Playlist suchen" autocomplete="off" hidden>
     <button class="tool" id="spReload" aria-label="Playlists neu laden" hidden><i data-icon="sync"></i></button>
     <button class="tool" id="spLogout" aria-label="Spotify abmelden" hidden><i data-icon="logout"></i></button>
-    <button class="tool" id="discordReset" aria-label="Discord-Anzeige zurücksetzen"><i data-icon="sync"></i></button>
+    <button class="tool" id="discordReset" aria-label="Discord-Anzeige zurücksetzen" hidden><i data-icon="sync"></i></button>
+    <button class="tool" id="pageSettings" aria-label="Seite bearbeiten" hidden><i data-icon="grid"></i></button>
+    <button class="tool" id="editBtn" aria-label="Tasten bearbeiten"><i data-icon="pencil"></i></button>
+    <button class="done-btn" id="doneBtn" hidden>Fertig</button>
     <span class="status off" id="status"><span class="dot"></span><span id="statusText">Getrennt</span></span>
   </div>
 </header>
 
 <main class="stage" id="stage">
-  <section class="page" id="page-control"><div class="deck" id="deckControl"></div></section>
-  <section class="page" id="page-spotify" hidden><div class="deck" id="deckSpotify"></div></section>
-  <section class="page" id="page-chrome" hidden><div class="deck" id="deckChrome"></div></section>
-  <section class="page" id="page-setup" hidden>
+  <section class="page" id="deckPage"><div class="deck" id="deck"></div></section>
+  <section class="page" id="setupPage" hidden>
     <div class="panel">
       <i data-icon="link" class="panel-icon"></i>
       <h2>Mit deinem PC verbinden</h2>
@@ -43,11 +45,65 @@
   </section>
 </main>
 
-<nav class="pager" id="pager">
-  <button data-page="control"><i data-icon="sliders"></i><span>Steuerung</span></button>
-  <button data-page="spotify"><i data-icon="music"></i><span>Spotify</span></button>
-  <button data-page="chrome"><i data-icon="globe"></i><span>Chrome</span></button>
-</nav>
+<nav class="pager" id="pager"></nav>
+
+<!-- Tasten-Editor -->
+<div class="modal" id="editor" hidden>
+  <div class="ed">
+    <div class="ed-head">
+      <button class="ed-cancel" id="edCancel">Abbrechen</button>
+      <div class="ed-title" id="edTitle">Taste bearbeiten</div>
+      <button class="ed-save" id="edSave">Speichern</button>
+    </div>
+    <div class="ed-body">
+      <div class="ed-col ed-look">
+        <div class="ed-preview"><div class="deck mini" id="edPreview"></div></div>
+        <label class="field"><span>Name</span>
+          <input id="edLabel" maxlength="40" autocomplete="off" placeholder="Beschriftung"></label>
+        <div class="field"><span>Farbe</span><div class="swatches" id="edColors"></div></div>
+        <div class="field"><span>Symbol</span>
+          <div class="icon-grid" id="edIcons"></div>
+          <input id="edEmoji" maxlength="8" autocomplete="off" placeholder="… oder ein Emoji eintippen 😀">
+        </div>
+        <div class="ed-tools">
+          <button class="ghost" id="edLeft" aria-label="Nach links"><i data-icon="left"></i></button>
+          <button class="ghost" id="edRight" aria-label="Nach rechts"><i data-icon="right"></i></button>
+          <select id="edMovePage" aria-label="Auf andere Seite verschieben"></select>
+          <button class="ghost danger" id="edDelete"><i data-icon="trash"></i>Löschen</button>
+        </div>
+      </div>
+      <div class="ed-col ed-action">
+        <div class="ed-section">Aktion</div>
+        <div id="edCurrent" class="ed-current"></div>
+        <div id="edParams"></div>
+        <div id="edCatalog" class="catalog"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Seiten-Editor -->
+<div class="modal" id="pageEd" hidden>
+  <div class="ed narrow">
+    <div class="ed-head">
+      <button class="ed-cancel" id="peCancel">Abbrechen</button>
+      <div class="ed-title" id="peTitle">Seite bearbeiten</div>
+      <button class="ed-save" id="peSave">Speichern</button>
+    </div>
+    <div class="ed-body single">
+      <div class="ed-col">
+        <label class="field"><span>Name der Seite</span><input id="peName" maxlength="30" autocomplete="off"></label>
+        <div class="field"><span>Symbol</span><div class="icon-grid" id="peIcons"></div></div>
+        <div class="ed-tools">
+          <button class="ghost" id="peLeft" aria-label="Nach links"><i data-icon="left"></i></button>
+          <button class="ghost" id="peRight" aria-label="Nach rechts"><i data-icon="right"></i></button>
+          <button class="ghost danger" id="peDelete"><i data-icon="trash"></i>Seite löschen</button>
+        </div>
+        <button class="ghost wide-btn" id="peReset">Standard-Layout wiederherstellen</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Eingabe für Webseiten -->
 <div class="sheet-bg" id="sheet" hidden>

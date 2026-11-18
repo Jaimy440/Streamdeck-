@@ -114,26 +114,39 @@ So funktioniert es:
 
 Die Erweiterung verbindet sich nur mit PC-Deck auf deinem eigenen PC (`127.0.0.1`) und sendet nichts ins Internet.
 
-Favoriten änderst du in `config.json` unter `"chrome"` → `"favorites"`:
-```json
-{ "label": "YouTube", "url": "https://www.youtube.com", "color": "#ff0033" }
-```
+Eigene Favoriten-Webseiten legst du als Tasten im Bearbeiten-Modus an (Chrome → „Webseite öffnen“).
 
 ---
 
-## Eigene Aktions-Buttons (`config.json`)
+## Tasten frei belegen ✎
 
-```json
-"buttons": [
-  { "label": "Play / Pause", "icon": "⏯️", "action": "hotkey",  "keys": "play/pause media" },
-  { "label": "OBS Szene 1",  "icon": "🎬", "action": "hotkey",  "keys": "ctrl+alt+f1" },
-  { "label": "Steam",        "icon": "🎮", "action": "launch",  "target": "C:\\Program Files (x86)\\Steam\\steam.exe" },
-  { "label": "Sperren",      "icon": "🔒", "action": "command", "target": "rundll32.exe user32.dll,LockWorkStation" }
-]
-```
+Jede Taste lässt sich direkt am iPhone umbelegen, so wie in der Streamdeck-Software:
 
-`action`: `hotkey` (Tastenkürzel), `launch` (Programm/Datei/App-Link), `url` (Webseite), `command` (Konsolenbefehl).
-Nach dem Ändern `start.bat` neu starten.
+1. Oben rechts auf **✎** tippen → die Tasten wackeln (Bearbeiten-Modus).
+2. **Taste antippen** → Editor öffnet sich:
+   - **links:** Name, Farbe und Symbol (über 40 Symbole oder ein beliebiges Emoji), dazu verschieben (‹ ›),
+     auf eine andere Seite verschieben oder löschen
+   - **rechts:** die **Aktion** aus der Liste wählen
+3. **„+ Neue Taste“** fügt eine Taste hinzu, **„+ Seite“** unten eine neue Seite.
+   Tippst du im Bearbeiten-Modus auf die aktuelle Seite (oder oben auf ▦), kannst du sie
+   umbenennen, ein Symbol wählen, verschieben oder löschen.
+4. **Fertig** tippen. Die Belegung wird auf dem PC in `config.json` gespeichert.
+
+| Kategorie | Aktionen |
+|-----------|----------|
+| System | Lauter, Leiser, PC stumm, Windows-Mikro, Medientasten (Play/Pause, Weiter, Zurück) |
+| Discord | Mikro stumm, Taub, Full Mute |
+| Spotify | **bestimmte Playlist abspielen**, Play/Pause, Weiter, Zurück, Zufall, Wiederholen, Lauter/Leiser |
+| Chrome | **bestimmte Webseite öffnen** (neuer Tab), Adresse eintippen, Video Play/Pause, ±10 s, Nächstes, Ton, Tempo, Lauter/Leiser |
+| Programme & Tasten | **Programm starten** (Auswahl aus deinem Startmenü oder eigener Pfad/Link wie `steam://`), **Tastenkürzel** (Strg/Umschalt/Alt/Win + Taste, mit Vorlagen) |
+| Navigation | **Zu Seite wechseln** (z. B. Ordner-Taste „Gaming“), leere Taste |
+| Anzeigen (breit) | PC-Lautstärke mit Regler, Spotify „Läuft gerade“, Chrome-Video mit Zeitleiste, alle Playlists als Tasten |
+
+> **Konsolenbefehle** (z. B. PC sperren) kann man aus Sicherheitsgründen nicht vom iPhone aus anlegen
+> oder ändern, nur in `config.json` am PC. So kann niemand mit Zugriff auf dein iPhone beliebige Befehle
+> auf deinem PC ausführen lassen. Bestehende Befehls-Tasten kannst du am iPhone aber umbenennen, verschieben und löschen.
+>
+> Alles kaputt-konfiguriert? Seiten-Einstellungen (▦) → **Standard-Layout wiederherstellen**.
 
 ## Probleme?
 
@@ -152,6 +165,8 @@ Nach dem Ändern `start.bat` neu starten.
 pc-app/
   start.bat            Startet PC-Deck (installiert beim 1. Mal alles)
   server.py            Server, Login, Befehle
+  layout.py            Seiten & Tastenbelegung
+  apps.py              Programme aus dem Startmenü auflisten
   controls.py          Lautstärke, Mikro, Tastenkürzel, Programme
   spotify.py           Spotify-Anbindung
   chrome.py            Chrome öffnen (ohne Erweiterung)
