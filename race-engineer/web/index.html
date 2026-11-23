@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0d10">
+<title>LMU Race Engineer</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand"><span class="logo">◢</span> Race Engineer</div>
+  <div class="top-item"><span class="lbl" id="sessName">Session</span><span class="val" id="track">–</span></div>
+  <div class="top-item big"><span class="lbl">Restzeit</span><span class="val" id="timeLeft">–:––</span></div>
+  <div class="top-item big"><span class="lbl" id="posLbl">Position</span><span class="val" id="pos">–</span></div>
+  <div class="top-item big"><span class="lbl">Runde</span><span class="val" id="lap">–</span></div>
+  <div id="flag" class="flag">–</div>
+  <div class="spacer"></div>
+  <div id="src" class="badge">verbinde …</div>
+  <button id="muteBtn" class="icon-btn" title="Funk stumm (Strg+Umschalt+0)">🔊</button>
+  <button id="setBtn" class="icon-btn" title="Einstellungen">⚙</button>
+</header>
+
+<div id="waiting" class="waiting hidden">
+  <div>
+    <h2>Warte auf Le Mans Ultimate …</h2>
+    <p>Starte LMU und fahr auf die Strecke. Das Shared-Memory-Plugin muss aktiviert sein (siehe README).</p>
+    <p><button id="demoBtn" class="btn">Demo-Rennen ansehen</button></p>
+  </div>
+</div>
+
+<main id="grid">
+  <!-- Spalte 1 -->
+  <section class="card" id="timingCard">
+    <h3>Rundenzeiten</h3>
+    <div class="laptime" id="curLap">-:--.---</div>
+    <div class="delta-wrap"><div class="delta-bar"><div id="deltaFill"></div></div><div class="delta-val" id="delta">±0.000</div></div>
+    <div class="kv3">
+      <div><span class="lbl">Letzte</span><span id="lastLap">–</span></div>
+      <div><span class="lbl">Beste</span><span id="bestLap" class="purple">–</span></div>
+      <div><span class="lbl">Ø 5 Runden</span><span id="avgLap">–</span></div>
+    </div>
+    <div class="sectors">
+      <div class="sector" id="sec1"><span class="lbl">S1</span><span>–</span></div>
+      <div class="sector" id="sec2"><span class="lbl">S2</span><span>–</span></div>
+      <div class="sector" id="sec3"><span class="lbl">S3</span><span>–</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="fuelCard">
+    <h3>Sprit &amp; Strategie</h3>
+    <div class="fuelbar"><div id="fuelFill"></div><span id="fuelTxt">– L</span></div>
+    <div class="kv2">
+      <div><span class="lbl">Verbrauch / Runde</span><span id="fPer">–</span></div>
+      <div><span class="lbl">Reicht für</span><span id="fLaps">–</span></div>
+      <div><span class="lbl">Bis Ziel (Runden)</span><span id="fRace">–</span></div>
+      <div><span class="lbl">Bedarf bis Ziel</span><span id="fNeed">–</span></div>
+      <div><span class="lbl">Nachtanken</span><span id="fAdd" class="hl">–</span></div>
+      <div><span class="lbl">Stopps</span><span id="fStops">–</span></div>
+    </div>
+    <div id="window" class="window">–</div>
+    <div id="veBox" class="hidden">
+      <div class="lbl" style="margin-top:8px">Virtuelle Energie</div>
+      <div class="fuelbar ve"><div id="veFill"></div><span id="veTxt">– %</span></div>
+      <div class="kv2">
+        <div><span class="lbl">Pro Runde</span><span id="vePer">–</span></div>
+        <div><span class="lbl">Reicht für</span><span id="veLaps">–</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="lapsCard">
+    <h3>Letzte Runden</h3>
+    <div class="scroll"><table class="tbl" id="lapsTbl"><thead><tr><th>#</th><th>Zeit</th><th>Δ Beste</th><th>Sprit</th><th></th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <!-- Spalte 2 -->
+  <section class="card" id="driveCard">
+    <div class="shift" id="shift"></div>
+    <div class="drive">
+      <div class="pedal"><div class="pfill brake" id="brk"></div></div>
+      <div class="gearbox">
+        <div class="gear" id="gear">N</div>
+        <div class="speed"><span id="speed">0</span> km/h</div>
+        <div class="rpm"><span id="rpm">0</span> U/min</div>
+        <div class="chips"><span id="limiter" class="chip">PIT LIMITER</span><span id="bb" class="chip dim">BB –</span></div>
+      </div>
+      <div class="pedal"><div class="pfill throttle" id="thr"></div></div>
+    </div>
+  </section>
+
+  <section class="card" id="tyreCard">
+    <h3>Reifen &amp; Bremsen <span class="small" id="compound"></span></h3>
+    <div class="tyres">
+      <div class="tyre" id="ty0"></div><div class="carbody"><div id="dmg" class="dmg">Kein Schaden</div><div class="engine" id="engine">Wasser – · Öl –</div></div><div class="tyre" id="ty1"></div>
+      <div class="tyre" id="ty2"></div><div class="carbody rear"></div><div class="tyre" id="ty3"></div>
+    </div>
+  </section>
+
+  <section class="card" id="mapCard">
+    <h3>Strecke <span class="small" id="weather"></span></h3>
+    <canvas id="map"></canvas>
+  </section>
+
+  <!-- Spalte 3 -->
+  <section class="card" id="relCard">
+    <h3>Um dich herum <span id="spotState" class="spot">frei</span></h3>
+    <div class="rel-wrap">
+      <table class="tbl rel" id="relTbl"><tbody></tbody></table>
+      <canvas id="radar" width="120" height="200"></canvas>
+    </div>
+    <div class="gaps">
+      <div><span class="lbl">Vorne</span><span id="gapAhead">–</span><span id="trendAhead" class="trend"></span></div>
+      <div><span class="lbl">Hinten</span><span id="gapBehind">–</span><span id="trendBehind" class="trend"></span></div>
+    </div>
+  </section>
+
+  <section class="card" id="standCard">
+    <h3>Wertung <select id="standFilter"><option value="cls">Meine Klasse</option><option value="all">Gesamt</option></select></h3>
+    <div class="scroll"><table class="tbl" id="standTbl"><thead><tr><th>P</th><th>Fahrer</th><th>Beste</th><th>Letzte</th><th>Abstand</th><th>Box</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="card" id="chatCard">
+    <h3>Renningenieur <span class="small" id="aiState"></span></h3>
+    <div class="log" id="log"></div>
+    <div class="quick">
+      <button data-r="status">Status</button><button data-r="sprit">Sprit</button><button data-r="reifen">Reifen</button>
+      <button data-r="abstaende">Abstände</button><button data-r="pace">Pace</button><button data-r="wetter">Wetter</button>
+      <button id="debriefBtn" class="ai">KI-Analyse</button>
+    </div>
+    <form id="askForm" class="ask">
+      <button type="button" id="micBtn" class="icon-btn" title="Frage sprechen (F2)">🎤</button>
+      <input id="askInput" placeholder="Frag deinen Ingenieur … z. B. „Wie viel muss ich nachtanken?“" autocomplete="off">
+      <button type="submit" class="btn">Fragen</button>
+    </form>
+  </section>
+</main>
+
+<div id="settings" class="modal hidden">
+  <div class="modal-box">
+    <h2>Einstellungen <button class="icon-btn close" id="setClose">✕</button></h2>
+    <div class="set-grid">
+      <label>Datenquelle
+        <select data-k="quelle"><option value="auto">Automatisch</option><option value="lmu">Le Mans Ultimate</option><option value="demo">Demo-Rennen</option></select></label>
+      <label>Sprachausgabe
+        <select data-k="sprachausgabe"><option value="pc">PC (Windows-Stimme)</option><option value="browser">Dieses Gerät (Browser)</option><option value="beide">Beides</option><option value="aus">Aus</option></select></label>
+      <label>Sprechtempo <input type="range" min="-5" max="6" step="1" data-k="sprechtempo"></label>
+      <label>Lautstärke PC <input type="range" min="10" max="100" step="5" data-k="lautstaerke"></label>
+      <label>KI-Modus
+        <select data-k="ki_modus"><option value="auto">Auto (eingebaut + Claude)</option><option value="immer">Alles über Claude</option><option value="aus">Nur eingebaut</option></select></label>
+      <label>Sprit-Reserve (Runden) <input type="number" min="0" max="3" step="0.1" data-k="sprit_reserve_runden"></label>
+      <label>Abstände ansagen alle … Runden <input type="number" min="1" max="10" step="1" data-k="abstand_alle_runden"></label>
+      <label>Reifen „heiß“ ab °C <input type="number" min="70" max="140" step="1" data-k="reifen_heiss"></label>
+      <label>Reifen „kalt“ unter °C <input type="number" min="20" max="90" step="1" data-k="reifen_kalt"></label>
+      <label class="chk"><input type="checkbox" data-k="rundenzeit_jede_runde"> Rundenzeit jede Runde ansagen</label>
+      <label class="chk"><input type="checkbox" data-k="spotter_seiten_tauschen"> Spotter: links/rechts tauschen</label>
+    </div>
+    <h3>Ansagen</h3>
+    <div class="set-grid" id="annGrid"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

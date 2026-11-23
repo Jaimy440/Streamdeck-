@@ -1,0 +1,5 @@
+aiohttp>=3.9
+comtypes>=1.2; sys_platform == "win32"
+keyboard>=0.13.5; sys_platform == "win32"
+# optional: KI-Antworten & Rennanalyse mit Claude
+anthropic>=0.70

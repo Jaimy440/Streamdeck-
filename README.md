@@ -1,5 +1,8 @@
 # PC-Deck – dein iPhone als Streamdeck
 
+> **Neu:** [`race-engineer/`](race-engineer/README.md) – KI-Renningenieur für **Le Mans Ultimate**
+> (Spotter, Sprit- & Strategierechner, Delta, Abstände, Reifen, Flaggen, Sprachausgabe, Fragen an Claude).
+
 Steuere deinen Windows-PC vom iPhone aus – im Look eines Hardware-Streamdecks: dunkle Tasten mit
 leuchtenden Farbakzenten, gemacht fürs **Querformat** (iPhone quer z. B. auf einem Ständer neben der Tastatur).
 Hochformat geht auch. Zwischen den Seiten wechselst du unten oder per Wischen; Playlists erscheinen als Tasten mit Cover.

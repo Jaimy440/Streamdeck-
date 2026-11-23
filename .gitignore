@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 pc-app/config.json
 pc-app/spotify_token.json
+race-engineer/config.json
