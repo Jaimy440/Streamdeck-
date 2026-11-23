@@ -122,8 +122,30 @@ header { display: flex; align-items: center; gap: 22px; padding: 8px 16px; backg
 .dmg { color: var(--muted); } .dmg.l1 { color: var(--yellow); } .dmg.l2 { color: var(--red); font-weight: 700; }
 .engine { color: var(--muted); font-family: var(--mono); }
 
-/* Karte & Radar */
-#mapCard canvas { flex: 1; width: 100%; min-height: 160px; }
+/* Karte, Kurven & Vergleich */
+.tabs button { background: none; border: 0; color: var(--muted); font: inherit; text-transform: uppercase; letter-spacing: .08em;
+  padding: 2px 8px 4px; cursor: pointer; border-bottom: 2px solid transparent; }
+.tabs button.on { color: var(--text); border-color: var(--accent); }
+.tabs .small { margin-left: auto; }
+.tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#tab-map canvas { flex: 1; width: 100%; min-height: 160px; }
+.coach-head { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; gap: 14px; flex-wrap: wrap; }
+.coach-head b { color: var(--text); font-family: var(--mono); font-weight: 600; }
+.tbl.corners td { font-size: 12px; }
+.tbl.corners tr { cursor: pointer; }
+.tbl.corners tr:hover td { background: var(--panel2); }
+.tbl.corners td.tip { font-family: inherit; white-space: normal; color: var(--muted); min-width: 150px; }
+.tbl.corners tr.worst td { background: rgba(255, 71, 87, .10); }
+.pos { color: var(--red); } .neg { color: var(--green); }
+.cmp-top { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; font-size: 12px; }
+.cmp-top select { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+.legend { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.legend i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; margin-left: 6px; }
+.lg-ref { background: var(--purple); } .lg-last { background: #fff; }
+.cmp-wrap { flex: 1; display: grid; grid-template-columns: 2fr 3fr; gap: 8px; min-height: 0; }
+.cmp-wrap canvas { width: 100%; height: 100%; min-height: 180px; background: var(--panel2); border-radius: 8px; }
+
+/* Radar */
 .rel-wrap { display: flex; gap: 10px; }
 .rel-wrap .tbl { flex: 1; }
 #radar { background: var(--panel2); border-radius: 8px; flex: 0 0 auto; }
@@ -168,7 +190,8 @@ header { display: flex; align-items: center; gap: 22px; padding: 8px 16px; backg
   #grid { height: auto; grid-template-columns: 1fr 1fr; grid-template-rows: none;
     grid-template-areas: "drive timing" "tyre fuel" "rel stand" "map laps" "chat chat"; }
   #standCard .scroll, #lapsCard { max-height: 360px; }
-  #mapCard canvas { height: 260px; }
+  #mapCard { min-height: 420px; }
+  #tab-map canvas { height: 260px; }
   #chatCard { min-height: 380px; }
 }
 @media (max-width: 760px) {
@@ -176,4 +199,6 @@ header { display: flex; align-items: center; gap: 22px; padding: 8px 16px; backg
   .top-item.big .val { font-size: 18px; }
   #grid { grid-template-columns: 1fr; grid-template-areas: "drive" "timing" "fuel" "tyre" "rel" "chat" "stand" "map" "laps"; padding: 8px 16px; }
   .tyres { grid-template-columns: 1fr 50px 1fr; }
+  .cmp-wrap { grid-template-columns: 1fr; }
+  .cmp-wrap canvas { height: 220px; }
 }

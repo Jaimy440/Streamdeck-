@@ -65,6 +65,38 @@ def _build_track():
 
 
 TRACK, SPEED = _build_track()
+STEP = TRACK_LEN / N_PTS
+
+
+def _corners():
+    """Kurven (Scheitelpunkte), Krümmung und eine einfache Ideallinie für die Demo-Fahrer."""
+    curv = []
+    for i in range(N_PTS):
+        p0, p1, p2 = TRACK[i - 3], TRACK[i], TRACK[(i + 3) % N_PTS]
+        ax, ay, bx, by = p1[0] - p0[0], p1[1] - p0[1], p2[0] - p1[0], p2[1] - p1[1]
+        curv.append((ax * by - ay * bx) / (math.hypot(ax, ay) * math.hypot(bx, by) * 6 * STEP + 1e-9))
+    apexes = []
+    for i in range(N_PTS):
+        win = [SPEED[(i + k) % N_PTS] for k in range(-40, 41)]
+        if SPEED[i] == min(win) and max(SPEED[(i - k) % N_PTS] for k in range(80)) - SPEED[i] > 6:
+            if not apexes or i - apexes[-1] > 20:
+                apexes.append(i)
+    ideal = [0.0] * N_PTS
+    owner = [None] * N_PTS
+    for k, a in enumerate(apexes):
+        sign = 1.0 if curv[a] > 0 else -1.0     # positiv = Linkskurve -> innen = links
+        for j in range(-90, 60):
+            i = (a + j) % N_PTS
+            d = j * STEP
+            w = math.exp(-(d / 70) ** 2)
+            e = math.exp(-(d / 230) ** 2)
+            ideal[i] += sign * (4.0 * w - 3.0 * e * (1 - w))
+            if -60 <= j <= 30:
+                owner[i] = k
+    return curv, apexes, ideal, owner
+
+
+CURV, APEXES, IDEAL, OWNER = _corners()
 
 
 def _track_at(s: float):
@@ -143,6 +175,8 @@ class DemoSource:
         self.prev_v = 0.0
         self.limiter = False
         self.pit_request = False
+        self.corner_style = {}
+        self._new_style()
 
     # ------------------------------------------------------------------
     def _weather(self):
@@ -155,6 +189,15 @@ class DemoSource:
     def _update_car(self, c: _Car, dt: float, rain: float):
         x, y, vlim, _, _ = _track_at(max(c.s, 0.0))
         grip = 1.0 - 0.12 * rain
+        idx = int((max(c.s, 0.0) % TRACK_LEN) / STEP) % N_PTS
+        line_err = 0.0
+        if c.is_player and OWNER[idx] is not None:
+            # Fahrfehler des Demo-Fahrers: Bremspunkt, Kurvenspeed, Linie
+            shift, apex_f, line_err = self.corner_style.get(OWNER[idx], (0.0, 1.0, 0.0))
+            vlim = _track_at(max(c.s, 0.0) + shift)[2]
+            near = abs(((idx - APEXES[OWNER[idx]] + N_PTS // 2) % N_PTS) - N_PTS // 2) * STEP < 90
+            if near:
+                vlim *= apex_f * (1 - 0.012 * abs(line_err))
         target = vlim * c.pace * grip
         if c.in_pits:
             target = 60 / 3.6
@@ -171,10 +214,15 @@ class DemoSource:
         if self.t < 2.0:
             c.speed = min(c.speed, 25.0)
         c.s += c.speed * dt
-        # Spurwechsel
+        # Linie: Ideallinie + eigene Abweichung
         if random.random() < dt * 0.15:
-            c.lat_target = random.uniform(-3.5, 3.5)
-        c.lateral += (c.lat_target - c.lateral) * min(1.0, dt * 0.8)
+            c.lat_target = 0.0 if c.is_player else random.uniform(-1.8, 1.8)
+        c.lat_off = getattr(c, "lat_off", 0.0) + (c.lat_target - getattr(c, "lat_off", 0.0)) * min(1.0, dt * 0.8)
+        apex_w = 0.0
+        if OWNER[idx] is not None:
+            dd = ((idx - APEXES[OWNER[idx]] + N_PTS // 2) % N_PTS - N_PTS // 2) * STEP
+            apex_w = math.exp(-(dd / 70) ** 2) * (1.0 if CURV[APEXES[OWNER[idx]]] > 0 else -1.0)
+        c.lateral = max(-5.5, min(5.5, IDEAL[idx] + c.lat_off - line_err * apex_w))   # Fehler = nach außen
 
         lap_time = self.t - c.lap_start
         frac = c.s / TRACK_LEN
@@ -206,7 +254,23 @@ class DemoSource:
                 c.pit_timer = 38
                 c.pitstops += 1
 
+    def _new_style(self):
+        """Pro Runde und Kurve leicht andere Bremspunkte/Linie, ab und zu ein deutlicher Fehler."""
+        style = {}
+        for k in range(len(APEXES)):
+            shift, apex_f, err = random.gauss(0, 5), random.gauss(1.0, 0.008), random.gauss(0, 0.5)
+            r = random.random()
+            if r < 0.07:
+                shift += 25          # viel zu früh gebremst
+            elif r < 0.12:
+                err += 2.2           # Scheitelpunkt verpasst (zu weit außen)
+            elif r < 0.16:
+                apex_f -= 0.04       # zu langsam durch die Kurve
+            style[k] = (shift, apex_f, err)
+        self.corner_style = style
+
     def _player_lap_done(self):
+        self._new_style()
         p = self.player
         if self.pit_request:
             self.pit_request = False
@@ -351,7 +415,7 @@ class DemoSource:
                 "vehicle": p.vehicle, "speed": p.speed * 3.6, "gear": self.gear if p.speed > 0.5 else 0,
                 "rpm": self.rpm, "max_rpm": 9400.0,
                 "throttle": getattr(self, "throttle", 0.0), "brake": getattr(self, "brake", 0.0),
-                "clutch": 0.0, "steering": math.sin(p.s / 140.0) * 0.4,
+                "clutch": 0.0, "steering": max(-1.0, min(1.0, -CURV[int((max(p.s, 0.0) % TRACK_LEN) / STEP) % N_PTS] * 60)),
                 "fuel": self.fuel, "fuel_capacity": self.fuel_cap,
                 "lap_number": p.laps, "lap_start_et": p.lap_start, "elapsed": self.t,
                 "water_temp": 82 + 6 * getattr(self, "throttle", 0), "oil_temp": 95.0,

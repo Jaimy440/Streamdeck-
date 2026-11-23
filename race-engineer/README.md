@@ -23,7 +23,8 @@ auf Wunsch mit **Claude (KI)**.
 | **Wetter & Session** | Luft-/Streckentemperatur, Regen, Nässe, Restzeit-Ansagen (30/15/10/5/2/1 Min.) |
 | **KI-Fragen** | „Wie viel muss ich nachtanken?“, „Wer ist hinter mir?“, „Wie sind meine Reifen?“ per Text oder **Sprache** |
 | **KI-Rennanalyse** | Auswertung nach der Session durch Claude: Pace, Konstanz, Strategie, Tipps |
-| **Streckenkarte** | wird aus deiner ersten Runde aufgezeichnet, mit allen Autos live |
+| **Fahrlinie & Kurven** | erkennt die Kurven automatisch und vergleicht jede Runde mit deiner Bestrunde: Zeitverlust pro Kurve, Bremspunkt, Kurvenspeed, Gaspunkt, Linie am Scheitelpunkt (innen/außen), theoretische Bestzeit, Tipp per Funk |
+| **Streckenkarte** | wird aus deiner ersten Runde aufgezeichnet, mit allen Autos live und Kurvennummern |
 
 Das Dashboard läuft im Browser: auf einem Zweitbildschirm, einem Tablet oder dem Handy.
 
@@ -84,6 +85,7 @@ CrewChief und SimHub. Ist eins davon bei dir schon eingerichtet, ist das Plugin 
 | `Strg + Umschalt + 2` | Sprit & Strategie |
 | `Strg + Umschalt + 3` | Reifen |
 | `Strg + Umschalt + 4` | Abstände |
+| `Strg + Umschalt + 5` | Fahrlinie: wo du am meisten Zeit verlierst |
 | `Strg + Umschalt + 0` | Funk stumm / an |
 
 > **Lenkrad-Tasten:** Leg einen Knopf in deiner Lenkrad-Software (z. B. Fanatec, Moza, Simucube) oder mit
@@ -111,7 +113,34 @@ Unter ⚙ → **KI-Modus**: *Auto* (Standardfragen eingebaut und sofort, alles a
 *Alles über Claude* oder *Nur eingebaut*. Verwendetes Modell: `ki_modell` in der `config.json`.
 Der Schlüssel bleibt auf deinem PC. An Claude geht nur eine kompakte Zusammenfassung der Telemetrie zusammen mit deiner Frage.
 
-## 6. Dashboard auf Tablet oder Handy
+## 6. Fahrlinie & Kurvenanalyse
+
+Nach deiner ersten sauberen Runde (ohne Boxenstopp) erkennt der Ingenieur die Kurven der Strecke
+und nimmt deine **Bestrunde als Referenz**. Jede weitere Runde wird Kurve für Kurve damit verglichen.
+Wird eine Runde schneller, ist sie automatisch die neue Referenz.
+
+| Wert | Bedeutung |
+|------|-----------|
+| **Zeit** | Gewinn/Verlust im Abschnitt *Bremspunkt dieser Kurve bis Bremspunkt der nächsten*. Damit zählt auch der Kurvenausgang (Speed auf der folgenden Geraden). Alle Abschnitte zusammen ergeben genau dein Runden-Delta. |
+| **Bremse** | Wo du angefangen hast zu bremsen, verglichen mit der Bestrunde (früher/später in Metern) |
+| **Min km/h** | Langsamster Punkt der Kurve (Scheitelpunkt-Speed) |
+| **Gas** | Wo du wieder voll am Gas warst |
+| **Scheitel** | Wie weit du am Scheitelpunkt innen oder außen von deiner Bestrunden-Linie warst |
+| **Ø** | Durchschnitt der letzten Runden: zeigt Kurven, in denen du *dauerhaft* Zeit liegen lässt |
+| **Theoretische Bestzeit** | Summe deiner besten Abschnitte aus allen Runden |
+
+- **Funk:** Nach jeder Runde sagt er dir die Kurve mit dem größten Zeitverlust samt Grund, z. B.
+  *„Kurve 4: 3 Zehntel verloren, 15 Meter zu früh gebremst.“* (abschaltbar unter ⚙)
+- **Nachfragen:** „Wo verliere ich Zeit?“, „Wie war mein Bremspunkt in Kurve 3?“, Taste **Fahrlinie** oder `Strg + Umschalt + 5`.
+  Mit Claude bekommst du auch ausführliche Tipps, weil die KI die komplette Kurvenauswertung sieht.
+- **Dashboard → Karte, Reiter „Kurven“:** Tabelle aller Kurven. Ein Klick auf eine Kurve öffnet **„Vergleich“**:
+  deine Linie gegenüber der Bestrunde in der Draufsicht (Abweichung 3× vergrößert, damit man die Meter sieht),
+  dazu Speed, Gas und Bremse über die Strecke.
+
+> Gemessen wird deine eigene Linie gegen deine eigene Bestrunde. Eine „Ideallinie“ der Strecke liefert LMU nicht.
+> Die Linienposition kommt aus den Weltkoordinaten des Autos und ist auf etwa einen halben Meter genau.
+
+## 7. Dashboard auf Tablet oder Handy
 
 Im Programmfenster steht eine Adresse wie `http://192.168.178.20:8770/?t=…`. Die im Browser des Tablets
 oder Handys öffnen (gleiches WLAN). Der Token in der Adresse schützt vor fremden Zugriffen. Am PC selbst
@@ -128,6 +157,7 @@ reicht `http://127.0.0.1:8770`.
 | `reifen_heiss` / `reifen_kalt` | Grenzwerte für Reifenwarnungen in °C |
 | `bremse_heiss`, `wasser_max` | Grenzwerte für Bremsen und Kühlwasser |
 | `spotter_seiten_tauschen` | Falls der Spotter links und rechts vertauscht |
+| `fahrlinie_tipps` | Nach jeder Runde den größten Zeitverlust ansagen |
 | `stimme` | Teil des Stimmennamens, z. B. `"Katja"` |
 | `ansagen` | Ansage-Kategorien einzeln an/aus |
 | `demo_zeitraffer` | Geschwindigkeit des Demo-Rennens |
@@ -153,6 +183,7 @@ race-engineer/
   lmu_shm.py         Telemetrie aus LMU (rF2-Shared-Memory)
   lmu_rest.py        Virtuelle Energie über die LMU-REST-API
   engineer.py        Auswertung & Ansagen (Sprit, Zeiten, Abstände, Flaggen, Reifen …)
+  linecoach.py       Fahrlinie & Kurvenanalyse (Vergleich mit der Bestrunde)
   spotter.py         Spotter & Radar
   voice.py           Sprachausgabe (Windows-Stimme)
   assistant.py       Fragen beantworten (eingebaut + Claude)

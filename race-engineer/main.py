@@ -46,8 +46,9 @@ DEFAULT_CONFIG = {
     "ansagen": {
         "spotter": True, "flaggen": True, "sprit": True, "strategie": True, "reifen": True,
         "rundenzeiten": True, "abstaende": True, "position": True, "schaden": True,
-        "technik": True, "session": True, "wetter": True, "verkehr": True,
+        "technik": True, "session": True, "wetter": True, "verkehr": True, "fahrlinie": True,
     },
+    "fahrlinie_tipps": True,          # nach jeder Runde: wo hast du am meisten Zeit verloren?
     "rundenzeit_jede_runde": True,
     "abstand_alle_runden": 2,
     "sprit_reserve_runden": 0.5,
@@ -67,13 +68,15 @@ DEFAULT_CONFIG = {
         "sprit": "ctrl+shift+2",
         "reifen": "ctrl+shift+3",
         "abstaende": "ctrl+shift+4",
+        "linie": "ctrl+shift+5",
         "stumm": "ctrl+shift+0",
     },
 }
 
 # Diese Einstellungen dürfen über das Dashboard geändert werden
 SETTABLE = {"sprachausgabe", "stumm", "sprechtempo", "lautstaerke", "rundenzeit_jede_runde", "abstand_alle_runden",
-            "sprit_reserve_runden", "reifen_heiss", "reifen_kalt", "spotter_seiten_tauschen", "ki_modus", "quelle"}
+            "sprit_reserve_runden", "reifen_heiss", "reifen_kalt", "spotter_seiten_tauschen", "ki_modus", "quelle",
+            "fahrlinie_tipps"}
 
 
 def _merge(default: dict, user: dict) -> dict:
@@ -125,6 +128,7 @@ class App:
         self.source_name = None
         self.rest = None
         self.sent_map_version = -1
+        self.sent_coach_version = -1
         self._select_source()
 
     # ------------------------------------------------------------------ Datenquelle
@@ -198,6 +202,9 @@ class App:
                     if self.eng.map_version != self.sent_map_version:
                         self.sent_map_version = self.eng.map_version
                         self.broadcast({"type": "map", "pts": self.eng.track_map()})
+                    if self.eng.coach.version != self.sent_coach_version:
+                        self.sent_coach_version = self.eng.coach.version
+                        self.broadcast({"type": "coach", "data": self.eng.coach.dashboard()})
                     self.broadcast({"type": "state", "data": analysis, "spotter": spot,
                                     "source": self.source_name})
             except Exception as e:      # eine kaputte Runde darf das Programm nicht beenden
@@ -211,7 +218,8 @@ class App:
     # ------------------------------------------------------------------ Aktionen
     REPORTS = {"status": "status_report", "sprit": "fuel_report", "reifen": "tyre_report",
                "abstaende": "gap_report", "position": "position_report", "pace": "pace_report",
-               "wetter": "weather_report", "schaden": "damage_report", "session": "session_report"}
+               "wetter": "weather_report", "schaden": "damage_report", "session": "session_report",
+               "linie": "line_report"}
 
     def report(self, which: str):
         if which == "stumm":
@@ -278,6 +286,7 @@ def make_web_app(app: App) -> web.Application:
         app.clients.add(ws)
         await ws.send_str(json.dumps({"type": "config", "config": app.public_config()}))
         await ws.send_str(json.dumps({"type": "map", "pts": app.eng.track_map()}))
+        await ws.send_str(json.dumps({"type": "coach", "data": app.eng.coach.dashboard()}))
         await ws.send_str(json.dumps({"type": "log", "items": app.log[-30:]}, ensure_ascii=False))
         try:
             async for msg in ws:

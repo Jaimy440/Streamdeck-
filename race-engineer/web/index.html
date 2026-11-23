@@ -99,8 +99,24 @@
   </section>
 
   <section class="card" id="mapCard">
-    <h3>Strecke <span class="small" id="weather"></span></h3>
-    <canvas id="map"></canvas>
+    <h3 class="tabs">
+      <button data-tab="map" class="on">Strecke</button><button data-tab="corners">Kurven</button><button data-tab="cmp">Vergleich</button>
+      <span class="small" id="weather"></span>
+    </h3>
+    <div class="tab" id="tab-map"><canvas id="map"></canvas></div>
+    <div class="tab hidden" id="tab-corners">
+      <div class="coach-head" id="coachHead">Fahr eine saubere Runde, dann erkenne ich die Kurven und vergleiche jede weitere Runde mit deiner Bestrunde.</div>
+      <div class="scroll"><table class="tbl corners" id="cornerTbl"><thead><tr>
+        <th>Kurve</th><th title="Zeit im Abschnitt, letzte Runde gegen Bestrunde">Letzte</th><th title="Durchschnitt der letzten Runden">Ø</th>
+        <th title="Bremspunkt: negativ = früher gebremst">Bremse</th><th title="Minimaler Kurvenspeed">Min km/h</th>
+        <th title="Voll am Gas: positiv = später">Gas</th><th title="Linie am Scheitelpunkt: + innen / − außen">Scheitel</th><th>Tipp</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="tab hidden" id="tab-cmp">
+      <div class="cmp-top"><select id="cornerSel"><option value="0">Ganze Runde</option></select>
+        <span class="legend"><i class="lg-ref"></i>Bestrunde <i class="lg-last"></i>Letzte Runde</span><span class="small" id="cmpInfo"></span></div>
+      <div class="cmp-wrap"><canvas id="cornerZoom"></canvas><canvas id="trace"></canvas></div>
+    </div>
   </section>
 
   <!-- Spalte 3 -->
@@ -126,7 +142,7 @@
     <div class="log" id="log"></div>
     <div class="quick">
       <button data-r="status">Status</button><button data-r="sprit">Sprit</button><button data-r="reifen">Reifen</button>
-      <button data-r="abstaende">Abstände</button><button data-r="pace">Pace</button><button data-r="wetter">Wetter</button>
+      <button data-r="abstaende">Abstände</button><button data-r="pace">Pace</button><button data-r="linie">Fahrlinie</button><button data-r="wetter">Wetter</button>
       <button id="debriefBtn" class="ai">KI-Analyse</button>
     </div>
     <form id="askForm" class="ask">
@@ -155,6 +171,7 @@
       <label>Reifen „kalt“ unter °C <input type="number" min="20" max="90" step="1" data-k="reifen_kalt"></label>
       <label class="chk"><input type="checkbox" data-k="rundenzeit_jede_runde"> Rundenzeit jede Runde ansagen</label>
       <label class="chk"><input type="checkbox" data-k="spotter_seiten_tauschen"> Spotter: links/rechts tauschen</label>
+      <label class="chk"><input type="checkbox" data-k="fahrlinie_tipps"> Fahrlinien-Tipp nach jeder Runde</label>
     </div>
     <h3>Ansagen</h3>
     <div class="set-grid" id="annGrid"></div>

@@ -46,6 +46,7 @@ function connect() {
     switch (m.type) {
       case "state": state = m; render(m); break;
       case "map": mapPts = m.pts || []; break;
+      case "coach": coach = m.data || { ready: false }; renderCoach(); break;
       case "config": cfg = m.config; applyConfig(); break;
       case "say": addLog(m.text, `p${m.prio}`, labelFor(m.cat)); if (m.browser) speak(m.text, m.prio); break;
       case "log": (m.items || []).forEach((i) => addLog(i.text, `p${i.prio}`, labelFor(i.cat))); break;
@@ -59,7 +60,7 @@ const send = (o) => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
 function setBadge(text, cls) { const b = $("src"); b.textContent = text; b.className = "badge " + cls; }
 const CAT_LABEL = { spotter: "Spotter", flaggen: "Flaggen", sprit: "Sprit", strategie: "Strategie", reifen: "Reifen",
   rundenzeiten: "Rundenzeit", abstaende: "Abstände", position: "Position", schaden: "Schaden", technik: "Technik",
-  session: "Session", wetter: "Wetter", verkehr: "Verkehr", antwort: "Antwort", system: "System" };
+  session: "Session", wetter: "Wetter", verkehr: "Verkehr", fahrlinie: "Fahrlinie", antwort: "Antwort", system: "System" };
 const labelFor = (c) => CAT_LABEL[c] || c || "";
 
 // ------------------------------------------------------------------ Darstellung
@@ -126,7 +127,7 @@ function render(m) {
   renderTyres(a);
   renderRelative(a, m.spotter);
   renderStandings(a);
-  drawMap(a);
+  if (activeTab === "map") drawMap(a);
   drawRadar(m.spotter);
   const rain = s.raining < 0.05 ? "trocken" : s.raining < 0.3 ? "leichter Regen" : "Regen";
   $("weather").textContent = `Luft ${Math.round(s.air_temp)}° · Strecke ${Math.round(s.track_temp)}° · ${rain} · ${Math.round(s.wetness * 100)}% nass`;
@@ -283,6 +284,16 @@ function drawMap(a) {
     ctx.fillStyle = "#8693a1"; ctx.font = `${12 * dpr}px sans-serif`;
     ctx.fillText("Streckenkarte wird in der ersten Runde aufgezeichnet …", pad, pad + 10 * dpr);
   }
+  if (coach.ready) {
+    ctx.font = `bold ${10 * dpr}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    coach.corners.forEach((cn) => {
+      const [px, py] = P(cn.x, cn.z);
+      ctx.fillStyle = "#13171c"; ctx.beginPath(); ctx.arc(px, py, 8 * dpr, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = cn.last && cn.last.loss > 0.1 ? "#ff4757" : "#3a434e"; ctx.lineWidth = 1.5 * dpr; ctx.stroke();
+      ctx.fillStyle = "#c8d0d8"; ctx.fillText(cn.n, px, py + 0.5 * dpr);
+    });
+    ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+  }
   cars.slice().sort((x, y) => x.me - y.me).forEach((car) => {
     if (car.pit) return;
     const [px, py] = P(car.x, car.z);
@@ -376,7 +387,8 @@ function speak(text, prio) {
 // ------------------------------------------------------------------ Einstellungen
 const ANN = { spotter: "Spotter (links/rechts)", flaggen: "Flaggen & Strafen", sprit: "Sprit & Energie", strategie: "Boxenstopp & Strategie",
   reifen: "Reifen", rundenzeiten: "Rundenzeiten", abstaende: "Abstände", position: "Positionswechsel", schaden: "Schaden",
-  technik: "Motor & Bremsen", session: "Restzeit & Ziel", wetter: "Wetter", verkehr: "Klassen-Verkehr" };
+  technik: "Motor & Bremsen", session: "Restzeit & Ziel", wetter: "Wetter", verkehr: "Klassen-Verkehr",
+  fahrlinie: "Fahrlinie & Kurven" };
 function applyConfig() {
   $("muteBtn").textContent = cfg.stumm ? "🔇" : "🔊";
   $("aiState").textContent = cfg.ki_verfuegbar ? "· Claude aktiv" : "· eingebaute Antworten";
@@ -400,5 +412,151 @@ document.querySelectorAll("#settings [data-k]").forEach((el) => {
 $("setBtn").addEventListener("click", () => $("settings").classList.remove("hidden"));
 $("setClose").addEventListener("click", () => $("settings").classList.add("hidden"));
 $("settings").addEventListener("click", (e) => { if (e.target.id === "settings") $("settings").classList.add("hidden"); });
+
+// ------------------------------------------------------------------ Fahrlinie & Kurven
+let coach = { ready: false };
+let activeTab = "map";
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+function showTab(name) {
+  activeTab = name;
+  document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === name));
+  ["map", "corners", "cmp"].forEach((t) => $("tab-" + t).classList.toggle("hidden", t !== name));
+  if (name === "cmp") drawCompare();
+  if (name === "map" && state) drawMap(state.data);
+}
+const fmtM = (v, plus = "später", minus = "früher") => (v == null ? "–" : v === 0 ? "gleich" : `${Math.abs(v)} m ${v > 0 ? plus : minus}`);
+const lossCell = (v) => (v == null ? "–" : `<span class="${v > 0.02 ? "pos" : v < -0.02 ? "neg" : ""}">${signed(v, 2)}</span>`);
+
+function renderCoach() {
+  const head = $("coachHead"), body = $("cornerTbl").tBodies[0], sel = $("cornerSel");
+  if (!coach.ready) {
+    body.innerHTML = "";
+    head.textContent = coach.laps ? "Noch keine gültige Referenzrunde (Runde ohne Boxenstopp, vollständig aufgezeichnet)."
+      : "Fahr eine saubere Runde, dann erkenne ich die Kurven und vergleiche jede weitere Runde mit deiner Bestrunde.";
+    return;
+  }
+  const tb = coach.theoretical_best;
+  head.innerHTML = `<span>Referenz <b>${lt(coach.ref_time)}</b></span>` +
+    (coach.last ? `<span>Letzte Runde ${coach.last.lap} <b>${lt(coach.last.time)}</b> (${signed(coach.delta, 3)})</span>` : "<span>Noch keine Vergleichsrunde</span>") +
+    (tb ? `<span>Theoretische Bestzeit <b>${lt(tb)}</b> (−${(coach.ref_time - tb).toFixed(3)})</span>` : "") +
+    `<span>${coach.corners.length} Kurven erkannt</span>`;
+  const worst = coach.corners.reduce((w, c) => (c.last && (!w || c.last.loss > w.last.loss) ? c : w), null);
+  body.innerHTML = coach.corners.map((c) => {
+    const l = c.last || {};
+    const apex = l.apex_off == null ? "–" : Math.abs(l.apex_off) < 0.3 ? "gleich" : `${Math.abs(l.apex_off).toFixed(1)} m ${l.apex_off > 0 ? "innen" : "außen"}`;
+    const minv = l.minv != null ? `${l.minv} <span class="${l.minv_diff < -1 ? "pos" : l.minv_diff > 1 ? "neg" : "small"}">(${l.minv_diff > 0 ? "+" : ""}${l.minv_diff})</span>` : c.ref_min_v;
+    return `<tr data-n="${c.n}" class="${worst === c && l.loss > 0.05 ? "worst" : ""}"><td>${c.n} <span class="small">${c.dir === "links" ? "↰" : "↱"}</span></td>` +
+      `<td>${lossCell(l.loss)}</td><td>${lossCell(c.avg_loss)}</td>` +
+      `<td>${c.kind === "Lupfen" ? '<span class="small">lupfen</span>' : fmtM(l.brake_diff)}</td><td>${minv}</td>` +
+      `<td>${fmtM(l.thr_diff)}</td><td>${apex}</td><td class="tip">${esc(l.tip || "")}</td></tr>`;
+  }).join("");
+  body.querySelectorAll("tr").forEach((tr) => tr.addEventListener("click", () => { sel.value = tr.dataset.n; showTab("cmp"); }));
+  const cur = sel.value;
+  sel.innerHTML = `<option value="0">Ganze Runde</option>` + coach.corners.map((c) => `<option value="${c.n}">Kurve ${c.n} (${c.dir})</option>`).join("");
+  sel.value = coach.corners.some((c) => String(c.n) === cur) ? cur : "0";
+  if (activeTab === "cmp") drawCompare();
+}
+$("cornerSel").addEventListener("change", drawCompare);
+window.addEventListener("resize", () => activeTab === "cmp" && drawCompare());
+
+function drawCompare() {
+  const zc = $("cornerZoom"), tc = $("trace");
+  const zx = zc.getContext("2d"), tx = tc.getContext("2d");
+  const dz = fitCanvas(zc), dt = fitCanvas(tc);
+  zx.clearRect(0, 0, zc.width, zc.height); tx.clearRect(0, 0, tc.width, tc.height);
+  if (!coach.ready) {
+    tx.fillStyle = "#8693a1"; tx.font = `${12 * dt}px sans-serif`;
+    tx.fillText("Noch keine Referenzrunde aufgezeichnet.", 12 * dt, 24 * dt);
+    return;
+  }
+  const step = coach.step_m, ref = coach.ref, last = coach.last;
+  const n = Number($("cornerSel").value);
+  const c = coach.corners.find((k) => k.n === n);
+  const i0 = c ? Math.max(0, Math.floor((c.brake_d - 80) / step)) : 0;
+  const i1 = c ? Math.min(ref.v.length - 1, Math.ceil((c.thr_d + 120) / step)) : ref.v.length - 1;
+  const l = c && c.last;
+  $("cmpInfo").textContent = c
+    ? (l ? `Zeit ${signed(l.loss, 3)} s · Bremse ${fmtM(l.brake_diff)} · Min ${l.minv} km/h (${l.minv_diff > 0 ? "+" : ""}${l.minv_diff}) · Gas ${fmtM(l.thr_diff)}` : "Noch keine Vergleichsrunde")
+    : (last ? `Runde ${last.lap}: ${signed(coach.delta, 3)} s gegen die Bestrunde` : "");
+
+  // --- Linie (Draufsicht), Abweichung vergrößert
+  const AMP = 3;
+  const pts = (lap) => {
+    const out = [];
+    for (let i = i0; i <= i1; i++) {
+      if (lap === ref) out.push([ref.x[i], ref.z[i]]);
+      else out.push([ref.x[i] + (lap.x[i] - ref.x[i]) * AMP, ref.z[i] + (lap.z[i] - ref.z[i]) * AMP]);
+    }
+    return out;
+  };
+  const rp = pts(ref), lp = last ? pts(last) : [];
+  let minx = Infinity, maxx = -Infinity, minz = Infinity, maxz = -Infinity;
+  rp.concat(lp).forEach(([x, z]) => { minx = Math.min(minx, x); maxx = Math.max(maxx, x); minz = Math.min(minz, z); maxz = Math.max(maxz, z); });
+  const pad = 16 * dz, W = zc.width - 2 * pad, H = zc.height - 2 * pad;
+  const k = Math.min(W / (maxx - minx || 1), H / (maxz - minz || 1));
+  const ox = pad + (W - (maxx - minx) * k) / 2, oz = pad + (H - (maxz - minz) * k) / 2;
+  const P = ([x, z]) => [ox + (x - minx) * k, oz + (maxz - z) * k];
+  const line = (arr, col, w) => {
+    zx.strokeStyle = col; zx.lineWidth = w * dz; zx.lineJoin = "round"; zx.beginPath();
+    arr.forEach((p, i) => { const [a, b] = P(p); i ? zx.lineTo(a, b) : zx.moveTo(a, b); }); zx.stroke();
+  };
+  line(rp, "#2a323c", 16); line(rp, "#b06cff", 3);
+  if (lp.length) line(lp, "#ffffff", 2);
+  const mark = (d, arr, col, label) => {
+    if (d == null) return;
+    const i = Math.round(d / step) - i0;
+    if (i < 0 || i >= arr.length) return;
+    const [a, b] = P(arr[i]);
+    zx.fillStyle = col; zx.beginPath(); zx.arc(a, b, 5 * dz, 0, Math.PI * 2); zx.fill();
+    if (label) { zx.font = `${10 * dz}px sans-serif`; zx.fillText(label, a + 7 * dz, b - 6 * dz); }
+  };
+  const corners = c ? [c] : coach.corners;
+  corners.forEach((k2) => {
+    mark(k2.brake_d, rp, "#ff4757", c ? "Bremse" : null);
+    mark(k2.apex_d, rp, "#ffc312", c ? "Scheitel" : String(k2.n));
+    mark(k2.thr_d, rp, "#2ed573", c ? "Gas" : null);
+    const kl = k2.last;
+    if (kl && lp.length) {
+      if (kl.brake_diff != null) mark(k2.brake_d + kl.brake_diff, lp, "#ffb3ba", null);
+      if (kl.thr_diff != null) mark(k2.thr_d + kl.thr_diff, lp, "#a8f0c6", null);
+    }
+  });
+  zx.fillStyle = "#8693a1"; zx.font = `${10 * dz}px sans-serif`;
+  zx.fillText(last ? `Abweichung ${AMP}× vergrößert` : "Bestrunde", 8 * dz, zc.height - 8 * dz);
+
+  // --- Speed-, Gas- und Bremsverlauf
+  const padL = 34 * dt, padR = 8 * dt, top = 10 * dt, hV = tc.height * 0.62, hP = tc.height * 0.13, gap = 6 * dt;
+  const xs = (i) => padL + ((i - i0) / Math.max(1, i1 - i0)) * (tc.width - padL - padR);
+  const vs = ref.v.slice(i0, i1 + 1).concat(last ? last.v.slice(i0, i1 + 1) : []);
+  const vmin = Math.floor(Math.min(...vs) / 10) * 10 - 10, vmax = Math.ceil(Math.max(...vs) / 10) * 10 + 5;
+  const yv = (v) => top + (1 - (v - vmin) / (vmax - vmin)) * (hV - top);
+  tx.strokeStyle = "#242b34"; tx.fillStyle = "#8693a1"; tx.font = `${10 * dt}px sans-serif`; tx.lineWidth = dt;
+  for (let v = Math.ceil(vmin / 50) * 50; v <= vmax; v += 50) {
+    tx.beginPath(); tx.moveTo(padL, yv(v)); tx.lineTo(tc.width - padR, yv(v)); tx.stroke();
+    tx.fillText(v, 4 * dt, yv(v) + 3 * dt);
+  }
+  corners.forEach((k2) => {
+    const i = Math.round(k2.apex_d / step);
+    if (i < i0 || i > i1) return;
+    tx.strokeStyle = "#3a434e"; tx.beginPath(); tx.moveTo(xs(i), top); tx.lineTo(xs(i), tc.height); tx.stroke();
+    tx.fillStyle = "#8693a1"; tx.fillText(c ? "Scheitel" : k2.n, xs(i) + 3 * dt, top + 8 * dt);
+  });
+  const plot = (arr, y, col, w) => {
+    tx.strokeStyle = col; tx.lineWidth = w * dt; tx.beginPath();
+    for (let i = i0; i <= i1; i++) { const p = [xs(i), y(arr[i])]; i === i0 ? tx.moveTo(...p) : tx.lineTo(...p); }
+    tx.stroke();
+  };
+  plot(ref.v, yv, "#b06cff", 2.5);
+  if (last) plot(last.v, yv, "#ffffff", 1.5);
+  const y0 = hV + gap, y1 = y0 + hP + gap;
+  const yt = (v) => y0 + (1 - v) * hP, yb = (v) => y1 + (1 - v) * hP;
+  tx.fillStyle = "#8693a1"; tx.fillText("Gas", 4 * dt, y0 + hP / 2 + 3 * dt); tx.fillText("Bremse", 0, y1 + hP / 2 + 3 * dt);
+  plot(ref.thr, yt, "rgba(176,108,255,.8)", 1.5); if (last) plot(last.thr, yt, "#2ed573", 1.5);
+  plot(ref.brk, yb, "rgba(176,108,255,.8)", 1.5); if (last) plot(last.brk, yb, "#ff4757", 1.5);
+  tx.fillStyle = "#8693a1";
+  tx.fillText(`${Math.round(i0 * step)} m`, padL, tc.height - 2 * dt);
+  const endLbl = `${Math.round(i1 * step)} m`;
+  tx.fillText(endLbl, tc.width - padR - tx.measureText(endLbl).width, tc.height - 2 * dt);
+}
 
 connect();

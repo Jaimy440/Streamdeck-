@@ -13,6 +13,7 @@ clock = time.monotonic   # austauschbar (Tests / Zeitraffer)
 from collections import deque
 
 import fmt
+import linecoach
 
 MAP_BIN = 12.0            # Meter pro Punkt der Streckenkarte
 
@@ -25,10 +26,12 @@ class Engineer:
     def __init__(self, cfg: dict, say):
         self.cfg = cfg
         self._say = say
+        self.coach = linecoach.LineCoach(cfg, self.say)
         self.reset()
 
     # ------------------------------------------------------------------ Zustand
     def reset(self):
+        self.coach.reset()
         self.session_key = None
         self.last_laps = None
         self.pending_lap_at = None
@@ -155,9 +158,11 @@ class Engineer:
             self._ld_last, self._ld_et = me["lap_dist"], now_et
         dist = me["lap_dist"] + t["speed"] / 3.6 * max(0.0, min(0.4, now_et - self._ld_et))
         ds, ts = self.cur_trace
-        if self.pending_lap_at is None and (not ds or dist > ds[-1] + 1.0) and dist < s["track_length"]:
+        # (der Rundenwechsel wurde oben schon erkannt -> ab hier gehört alles zur neuen Runde)
+        if (not ds or dist > ds[-1] + 1.0) and dist < s["track_length"]:
             ds.append(dist)
             ts.append(time_into)
+            self.coach.sample(dist, time_into, t)
         delta = None
         if self.best_trace and time_into > 3:
             ref = self._trace_time(self.best_trace, dist)
@@ -227,6 +232,7 @@ class Engineer:
             "relative": relative,
             "standings": self._standings(frame, me, multi),
             "map_version": self.map_version,
+            "coach_version": self.coach.version,
             "cars_pos": [{"id": c["id"], "x": round(c["pos"][0], 1), "z": round(c["pos"][2], 1),
                           "cls": c["cls"], "me": c["is_player"], "p": c["place"],
                           "pit": c["in_pits"]} for c in frame["cars"]],
@@ -242,6 +248,7 @@ class Engineer:
     def _finish_trace(self, me):
         self.finished_trace = self.cur_trace
         self.cur_trace = ([], [])
+        self.coach.lap_boundary()
 
     def _on_lap(self, frame, me, t, same, class_pos, multi):
         s = frame["session"]
@@ -262,13 +269,18 @@ class Engineer:
 
         # Bestzeit & Delta-Kurve
         new_pb = False
+        became_best = False
         if valid and lap_time and (self.best_lap is None or lap_time < self.best_lap):
+            became_best = True
             had = self.best_lap is not None
             self.best_lap = lap_time
             ds, ts = self.finished_trace
             if len(ds) > 50 and ds[0] < 0.1 * s["track_length"] and ds[-1] > 0.9 * s["track_length"]:
                 self.best_trace = (ds + [s["track_length"]], ts + [lap_time])
             new_pb = had
+
+        # Fahrlinie mit der Bestrunde vergleichen
+        self.coach.on_lap(lap_no, lap_time, valid, became_best, s["track_length"])
 
         # Abstände merken (für Trend: holst du auf / verlierst du?)
         g = self._gaps(frame, me, same)
@@ -755,6 +767,9 @@ class Engineer:
             return "Kein Schaden erkannt, das Auto ist heil."
         return ("Schwerer" if d["level"] >= 2 else "Leichter") + " Schaden am Auto" + \
             (", es fehlen Teile." if d["detached"] else ".")
+
+    def line_report(self) -> str:
+        return self.coach.report()
 
     def status_report(self) -> str:
         if not self.analysis.get("connected") or "timing" not in self.analysis:

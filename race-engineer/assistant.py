@@ -19,7 +19,10 @@ Deine Antworten werden laut vorgelesen, während der Fahrer fährt. Deshalb:
 - Nutze ausschließlich die mitgeschickten Daten. Wenn etwas fehlt, sag ehrlich, dass du es nicht weißt.
 - Sei ruhig, präzise und motivierend wie ein echter Ingenieur.
 Zeitangaben in den Daten sind Sekunden, Temperaturen Grad Celsius, Drücke kPa, Sprit Liter,
-Reifenverschleiß "wear" ist der verbleibende Anteil (1.0 = neu). "gap" positiv = Rückstand."""
+Reifenverschleiß "wear" ist der verbleibende Anteil (1.0 = neu). "gap" positiv = Rückstand.
+"fahrlinie" vergleicht die letzte Runde Kurve für Kurve mit der Bestrunde: loss = Zeitverlust in Sekunden,
+brake_diff = Bremspunkt in Metern (negativ = früher), minv_diff = Kurvenspeed-Differenz in km/h,
+thr_diff = Gaspunkt in Metern (positiv = später), apex_off/exit_off = Linie in Metern (positiv = weiter innen)."""
 
 DEBRIEF_PROMPT = """Du bist Renningenieur und machst nach der Session eine Analyse für einen Sim-Racer (Le Mans Ultimate).
 Schreibe auf Deutsch eine kompakte Auswertung mit kurzen Absätzen: Pace und Konstanz, Sprit/Strategie,
@@ -27,6 +30,8 @@ Reifen, auffällige Runden, und zwei bis drei konkrete Tipps fürs nächste Mal.
 
 # Schlüsselwörter -> eingebauter Bericht
 INTENTS = [
+    (r"linie|kurve|bremspunkt|scheitel|wo verliere|zeit liegen|einlenk|apex|verbesser|schneller werden|theoretisch",
+     "line_report"),
     (r"sprit|benzin|tank|fuel|verbrauch|liter|energie|energy", "fuel_report"),
     (r"wetter|regen|nass|weather|rain|luft|temperatur der strecke|streckentemp", "weather_report"),
     (r"reifen|tyre|tire|pneu|grip|druck|bremse", "tyre_report"),
@@ -39,7 +44,7 @@ INTENTS = [
 ]
 
 
-def compact_context(analysis: dict) -> dict:
+def compact_context(analysis: dict, engineer=None) -> dict:
     """Die wichtigsten Daten kompakt für die KI (spart Tokens)."""
     a = analysis
     if not a.get("connected") or "timing" not in a:
@@ -48,6 +53,7 @@ def compact_context(analysis: dict) -> dict:
     rel = [{"fahrer": r["driver"], "klasse": r["cls"], "abstand_s": r["rel"], "runden_diff": r["lapped"]}
            for r in a.get("relative", []) if not r["me"]]
     my_cls = a["car"]["cls"]
+    coach = engineer.coach.summary() if engineer is not None else None
     standings = [{"p": s["cls_place"], "fahrer": s["driver"], "best": s["best"], "gap_zu_mir": s["gap_me"],
                   "runden_zu_mir": s["laps_me"], "stopps": s["stops"]}
                  for s in a.get("standings", []) if s["cls"] == my_cls][:12]
@@ -67,6 +73,7 @@ def compact_context(analysis: dict) -> dict:
         "abstaende_klasse": a["gaps"],
         "um_mich_herum": rel,
         "klassenwertung": standings,
+        "fahrlinie": coach,
     }
 
 
@@ -113,7 +120,7 @@ class Assistant:
         if not self.claude_available():
             return ("Das kann ich ohne KI-Schlüssel nicht beantworten. Frag mich nach Sprit, Reifen, Abständen, "
                     "Position, Rundenzeiten, Wetter, Schaden oder Restzeit."), "regel"
-        ctx = json.dumps(compact_context(self.eng.analysis), ensure_ascii=False, default=lambda o: None)
+        ctx = json.dumps(compact_context(self.eng.analysis, self.eng), ensure_ascii=False, default=lambda o: None)
         msgs = self.history[-8:] + [{"role": "user", "content": f"Aktuelle Telemetrie (JSON):\n{ctx}\n\nFahrer: {question}"}]
         text = await self._claude(SYSTEM_PROMPT, msgs, effort="low", max_tokens=1024)
         self.history += [{"role": "user", "content": question}, {"role": "assistant", "content": text}]
@@ -124,7 +131,7 @@ class Assistant:
         if not self.claude_available():
             return "Für die Rennanalyse brauchst du einen Anthropic-API-Schlüssel (siehe README)."
         a = self.eng.analysis
-        data = {"kontext": compact_context(a), "alle_runden": self.eng.laps,
+        data = {"kontext": compact_context(a, self.eng), "alle_runden": self.eng.laps,
                 "verbrauch_je_runde": list(self.eng.fuel_hist)}
         msgs = [{"role": "user", "content": "Session-Daten (JSON):\n" + json.dumps(data, ensure_ascii=False, default=lambda o: None)}]
         return await self._claude(DEBRIEF_PROMPT, msgs, effort="medium", max_tokens=4000)
