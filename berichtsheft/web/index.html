@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Berichtsheft-Assistent</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>📒 Berichtsheft-Assistent</h1>
+  <nav>
+    <button data-tab="woche" class="aktiv">Neue Woche</button>
+    <button data-tab="archiv">Archiv <span id="anzahl" class="badge">0</span></button>
+    <button data-tab="einstellungen">Einstellungen</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ======================= Neue Woche ======================= -->
+  <section id="woche" class="tab aktiv">
+    <div class="karte">
+      <div class="reihe">
+        <label>KW <input id="kw" type="number" min="1" max="53"></label>
+        <label>Jahr <input id="jahr" type="number" min="2000" max="2100"></label>
+        <label class="breit">Abteilung <input id="abteilung" placeholder="z. B. IT-Support, Werkstatt, Einkauf"></label>
+      </div>
+      <p class="tipp">Schreib pro Tag nur Stichworte (durch Komma oder Zeilen getrennt).
+        Weißt du nichts mehr? Feld leer lassen oder <b>?</b> schreiben – dann wird aus alten Berichten ergänzt.
+        <b>Urlaub</b>, <b>Krank</b> oder <b>Feiertag</b> werden erkannt.</p>
+      <div id="tage"></div>
+      <div class="aktionen">
+        <button id="generieren" class="primaer">✨ Bericht schreiben</button>
+        <button id="leeren">Felder leeren</button>
+      </div>
+    </div>
+
+    <div id="ergebnis" class="karte versteckt">
+      <div class="kopf">
+        <h2>Ergebnis <span id="modus" class="badge"></span></h2>
+        <div class="legende">
+          <span class="q notiz">aus deiner Notiz</span>
+          <span class="q ergaenzt">ergänzt</span>
+          <span class="q vorschlag">Vorschlag – bitte prüfen</span>
+        </div>
+      </div>
+      <ul id="hinweise" class="hinweise"></ul>
+      <div id="ausgabe"></div>
+      <div id="doppelt" class="warnung versteckt"></div>
+      <div id="vergleich" class="vergleich"></div>
+      <div class="aktionen">
+        <button id="kopieren">📋 Als Text kopieren</button>
+        <button id="speichern" class="primaer">💾 Ins Archiv speichern</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= Archiv ======================= -->
+  <section id="archiv" class="tab">
+    <div class="karte">
+      <h2>Alte Berichtshefte importieren</h2>
+      <p class="tipp">Text einfügen oder .txt-Dateien wählen. Mehrere Wochen auf einmal gehen, wenn jede mit
+        <b>KW 12</b> bzw. <b>KW 12/2025</b> beginnt. Tageszeilen wie <b>Montag:</b> oder <b>Mo</b> werden erkannt.</p>
+      <div class="reihe">
+        <label>KW (falls nicht im Text) <input id="imp-kw" type="number" min="1" max="53"></label>
+        <label>Jahr <input id="imp-jahr" type="number"></label>
+        <label class="breit">Abteilung <input id="imp-abteilung"></label>
+      </div>
+      <textarea id="imp-text" rows="10" placeholder="KW 10/2025&#10;Montag: Kundenanfragen im Ticketsystem bearbeitet&#10;Dienstag: Neue Laptops eingerichtet&#10;..."></textarea>
+      <div class="aktionen">
+        <label class="datei">📄 Dateien wählen <input id="imp-datei" type="file" accept=".txt,.md,.csv" multiple></label>
+        <button id="importieren" class="primaer">Importieren</button>
+      </div>
+    </div>
+    <div class="karte">
+      <div class="kopf">
+        <h2>Archiv</h2>
+        <input id="suche" placeholder="🔍 Im Archiv suchen …">
+      </div>
+      <div id="liste"></div>
+    </div>
+  </section>
+
+  <!-- ======================= Einstellungen ======================= -->
+  <section id="einstellungen" class="tab">
+    <div class="karte">
+      <h2>Einstellungen</h2>
+      <label>Ausbildungsberuf <input id="cfg-beruf" placeholder="z. B. Fachinformatiker Systemintegration"></label>
+      <label>Standard-Abteilung <input id="cfg-abteilung"></label>
+      <label>Claude-API-Key (optional)
+        <input id="cfg-key" type="password" placeholder="sk-ant-…" autocomplete="off">
+      </label>
+      <p id="key-status" class="tipp"></p>
+      <p class="tipp">Ohne Key läuft alles offline: deine Notizen werden in Stichpunkte zerlegt und
+        Lücken mit passenden Punkten aus dem Archiv gefüllt. Mit Key formuliert Claude die Sätze
+        sauber um und schreibt Vorschläge neu, statt sie wörtlich zu übernehmen.
+        Der Key wird nur lokal in <code>data/config.json</code> gespeichert.</p>
+      <div class="aktionen">
+        <button id="cfg-key-loeschen">Key entfernen</button>
+        <button id="cfg-speichern" class="primaer">Speichern</button>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -174,3 +174,11 @@ pc-app/
   config.json          Deine Einstellungen (wird beim 1. Start erstellt)
 chrome-extension/      Chrome-Erweiterung für Tabs & Video-Steuerung
 ```
+
+---
+
+## Extra: Berichtsheft-Assistent
+
+Im Ordner [`berichtsheft/`](berichtsheft/README.md) liegt eine eigene Web-App, die dein Berichtsheft aus
+Stichworten in kurze Stichpunkt-Sätze verwandelt, mit alten Berichtsheften vergleicht und vergessene Tage
+aus dem Archiv ergänzt. Start: `berichtsheft/start.bat`.
